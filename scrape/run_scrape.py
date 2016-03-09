@@ -44,6 +44,7 @@ for each giant component:
 import batch
 import csv
 import graph_tool as gt
+from json_rw import *
 import os
 import random
 from scrape import *

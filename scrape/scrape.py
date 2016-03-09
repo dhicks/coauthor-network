@@ -177,4 +177,5 @@ if __name__ == '__main__':
 	#author_list = ['1111111111']
 	for author in author_list:
 		metadata = get_auth_data_by_sid(author)
-		print(json.dumps(metadata, indent = 4, ensure_ascii = False))
+		#print(json.dumps(metadata, indent = 4, ensure_ascii = False))
+		print(metadata)

@@ -87,7 +87,7 @@ def run_batch(retrieve):
 	os.chdir(BATCH_FOLDER)
 	
 	# Read the item and data lists
-	item_list = json_readfile(BATCH_FILENAME)
+	item_list = json_readf(BATCH_FILENAME)
 	if type(item_list) is not list:
 		# item_list should be a list of DOIs or other ID numbers
 		raise BatchError('Batch file does not read as list') 
