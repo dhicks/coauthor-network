@@ -56,6 +56,7 @@ def _parse_coauth_data(sid, response_raw):
 def _parse_auth_data(response_raw):
 	'''
 	TODO: rewrite docstring
+	TODO: names need to be handled as unicode strings
 	'''
 	# Convert the xml response to a dict to make it easier to parse
 	#response = json.loads(response_raw)
@@ -172,8 +173,8 @@ def get_auth_data_by_sid(sid):
 
 
 if __name__ == '__main__':
-	author_list = ['7006596737']
+	author_list = ['25225396500']
 	#author_list = ['1111111111']
 	for author in author_list:
 		metadata = get_auth_data_by_sid(author)
-		print(json.dumps(metadata, indent = 4))
+		print(json.dumps(metadata, indent = 4, ensure_ascii = False))

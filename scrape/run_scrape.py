@@ -69,8 +69,7 @@ print('Run started at ' + time.strftime('%c', time.localtime()))
 # A file to track the status of the scrape
 status_file = 'status.json'
 if os.access(status_file, os.R_OK):
-	with open(status_file) as readfile:
-		status = json.load(readfile)
+	status = json_readf(status_file)
 else:
 	status = {
 		'1a': {'start': False, 'finish': False},
@@ -87,8 +86,7 @@ else:
 if status['1a']['start'] == False:
 	# Get the generation 1 SIDs manually retrieved from Scopus
 #	gen_1_sids = ['7006596737']
-	with open(sids_infile) as readfile:
-		gen_1_sids = json.load(readfile)
+	gen_1_sids = json_readf(sids_infile)
 
 	print(str(len(gen_1_sids)) + ' items in generation 1')
 
@@ -98,8 +96,7 @@ if status['1a']['start'] == False:
 
 	if batch_response == True:
 		status['1a']['start'] = True
-		with open(status_file, 'w') as writefile:
-			json.dump(status, writefile)
+		json_writef(status, status_file)
 	else:	
 		raise Exception('Error setting batch')
 
@@ -119,23 +116,20 @@ if status['1a']['finish'] == False:
 		# Retrieve the batch results
 		gen_1_coauth = batch.retrieve_batch()
 		# Write them to a permanent file
-		with open(gen_1_coauth_outfile, 'w') as writefile:
-			json.dump(gen_1_coauth, writefile)
+		json_writef(gen_1_coauth, gen_1_coauth_outfile)
 		# Clean up the batch output
 		batch.clean_batch()
 		
 		# Finished with step 1a
 		status['1a']['finish'] = True
-		with open(status_file, 'w') as writefile:
-			json.dump(status, writefile)
+		json_writef(status, status_file)
 
 
 # Step 1b:  Coauthor pairs from generation 2
 
 if status['1b']['start'] == False:
 	# Load the generation 1 coauthor pairs
-	with open(gen_1_coauth_outfile) as readfile:
-		gen_1_coauth = json.load(readfile)
+	gen_1_coauth = json_readf(gen_1_coauth_outfile)
 	gen_1_sids = set([item[0] for item in gen_1_coauth])
 	gen_2_sids = set([item[1] for item in gen_1_coauth 
 								if item[1] not in gen_1_sids])
@@ -147,8 +141,7 @@ if status['1b']['start'] == False:
 		
 	if batch_response == True:
 		status['1b']['start'] = True
-		with open(status_file, 'w') as writefile:
-			json.dump(status, writefile)
+		json_writef(status, status_file)
 	else:
 		raise Exception('Error setting batch')
 		
@@ -169,23 +162,19 @@ if status['1b']['finish'] == False:
 		# Retrieve the batch results
 		gen_2_coauth = batch.retrieve_batch()
 		# Write them to a permanent file
-		with open(gen_2_coauth_outfile, 'w') as writefile:
-			json.dump(gen_2_coauth, writefile)
+		json_writef(gen_2_coauth, gen_2_coauth_outfile)
 		# Clean up the batch output
 		batch.clean_batch()
 		
 		# Finished with step 1b
 		status['1b']['finish'] = True
-		with open(status_file, 'w') as writefile:
-			json.dump(status, writefile)
+		json_writef(status, status_file)
 			
 if status['2a']['start'] == False:
 	# Load files with coauthor pairings
 	print('Loading coauthor pairs')
-	with open(gen_1_coauth_outfile) as readfile:
-		gen_1_coauth = json.load(readfile)
-	with open(gen_2_coauth_outfile) as readfile:
-		gen_2_coauth = json.load(readfile)
+	gen_1_coauth = json_readf(gen_1_coauth_outfile)
+	gen_2_coauth = json_readf(gen_2_coauth_outfile)
 	# Combine them
 	coauth_pairs = gen_1_coauth + gen_2_coauth
 	print(str(len(coauth_pairs)) + ' pairs to process')
@@ -226,8 +215,7 @@ if status['2a']['start'] == False:
 	
 	# SIDs to retrieve metadata for
 	combined_sids = [net.vp['sid'][v] for v in net.vertices()]
-	with open(combined_sids_file, 'w') as writefile:
-		json.dump(combined_sids, writefile)
+	json_writef(combined_sids, combined_sids_file)
 	# Save graph
 	net.save(net_outfile_pre + '.temp' + '.graphml')
 	net.save(net_outfile_pre + '.temp' + '.gt')
@@ -236,13 +224,11 @@ if status['2a']['start'] == False:
 	# Finished with 2a
 	status['2a']['start'] = True
 	status['2a']['finish'] = True
-	with open(status_file, 'w') as writefile:
-		json.dump(status, writefile)
+	json_writef(status, status_file)
 		
 if status['2b']['start'] == False:
 	# Load SIDs to retrieve metadata for
-	with open(combined_sids_file) as readfile:
-		combined_sids = json.load(readfile)
+	combined_sids = json_readf(combined_sids_file)
 	
 	print(str(len(combined_sids)) + ' authors to retrieve')
 	if not batch.exists_batch():
@@ -250,8 +236,7 @@ if status['2b']['start'] == False:
 		batch_response = batch.set_batch(combined_sids)
 	if batch_response == True:
 		status['2b']['start'] = True
-		with open(status_file, 'w') as writefile:
-			json.dump(status, writefile)
+		json_writef(status, status_file)
 	else:
 		raise Exception('Error setting batch')
 		
@@ -270,20 +255,17 @@ if status['2b']['finish'] == False:
 		# Retrieve the batch results
 		author_data = batch.retrieve_batch()
 		# Write them to a permanent file
-		with open(author_data_file, 'w') as writefile:
-			json.dump(author_data, writefile)
+		json_writef(author_data, author_data_file)
 		# Clean up the batch output
 		batch.clean_batch()
 		
 		# Finished with step 2b
 		status['2b']['finish'] = True
-		with open(status_file, 'w') as writefile:
-			json.dump(status, writefile)
+		json_writef(status, status_file)
 
 if status['3']['start'] == False:
 	# Load the author data and temporary graph file
-	with open(author_data_file) as readfile:
-		author_data = json.load(readfile)
+	author_data = json_readf(author_data_file)
 	net = gt.load_graph(net_outfile_pre + '.temp' + '.gt')
 	# Build the dict to link Scopus IDs to net vertices
 	gt_from_sids = {net.vp['sid'][v]: v for v in net.vertices()}
@@ -327,8 +309,7 @@ if status['3']['start'] == False:
 	
 	status['3']['start'] = True
 	status['3']['finish'] = True
-	with open(status_file, 'w') as writefile:
-		json.dump(status, writefile)
+	json_writef(status, status_file)
 
 if status['3']['finish'] == False:
 	print('Not yet finished with all steps')

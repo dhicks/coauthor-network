@@ -7,7 +7,7 @@ periodically for some basic error handling.
 '''
 
 import os
-import json
+from json_rw import *
 
 BATCH_FOLDER = 'batch'			# Folder, in cwd, to store batch data
 BATCH_FILENAME = 'batch.json'	# File that holds the list of items to be retrieved
@@ -55,11 +55,9 @@ def set_batch(item_list):
 		raise BatchError('Output file already exists')
 
 	# Write the list of items into the batch file
-	with open(BATCH_FILENAME, 'w') as writefile:
-		json.dump(item_list, writefile)
+	json_writef(item_list, BATCH_FILENAME)
 	# Write an empty list into the data file
-	with open(OUTPUT_FILENAME, 'w') as writefile:
-		json.dump([], writefile)
+	json_writef([], OUTPUT_FILENAME)
 	
 	# Reset the working directory and return that everything went okay
 	os.chdir(original_wd)
@@ -89,16 +87,13 @@ def run_batch(retrieve):
 	os.chdir(BATCH_FOLDER)
 	
 	# Read the item and data lists
-	with open(BATCH_FILENAME) as readfile:
-		item_list = json.load(readfile)
-		if type(item_list) is not list:
-			# item_list should be a list of DOIs or other ID numbers
-			raise BatchError('Batch file does not read as list') 
-	with open(OUTPUT_FILENAME) as readfile:
-		data = json.load(readfile)
+	item_list = json_readfile(BATCH_FILENAME)
+	if type(item_list) is not list:
+		# item_list should be a list of DOIs or other ID numbers
+		raise BatchError('Batch file does not read as list') 
+	data = json_readf(OUTPUT_FILENAME)
 	# Make a backup of the data file
-	with open(OUTPUT_FILENAME + '.bak', 'w') as writefile:
-		json.dump(data, writefile)
+	json_writef(data, OUTPUT_FILENAME + '.bak')
 
 	print('Total items to retrieve: ' + str(len(item_list)))
 		
@@ -131,12 +126,10 @@ def run_batch(retrieve):
 				# Add temp_data to data
 				data += temp_data
 				# Write to the disk
-				with open(OUTPUT_FILENAME, 'w') as writefile:
-					json.dump(data, writefile)
+				json_writef(data, OUTPUT_FILENAME)
 				# Remove retrieved items from item_list
 				item_list = [item for item in item_list if item not in retrieved]
-				with open(BATCH_FILENAME, 'w') as writefile:
-					json.dump(item_list, writefile)
+				json_writef(item_list, BATCH_FILENAME)
 				print('Saved retrieved data')
 				print('Continuing batch run')
 				temp_data = []
@@ -146,17 +139,14 @@ def run_batch(retrieve):
 		# Add temp_data to data
 		data += temp_data
 		# Write to the disk
-		with open(OUTPUT_FILENAME, 'w') as writefile:
-			json.dump(data, writefile)
+		json_writef(data, OUTPUT_FILENAME)
 		# Remove retrieved items from item_list
 		item_list = [item for item in item_list if item not in retrieved]
-		with open(BATCH_FILENAME, 'w') as writefile:
-			json.dump(item_list, writefile)
+		json_writef(item_list, BATCH_FILENAME)
 		
 		# For the item list, check whether the list is empty
 		if item_list != []:
-			with open(BATCH_FILENAME, 'w') as writefile:
-				json.dump(item_list, writefile)
+			json_writef(item_list, BATCH_FILENAME)
 		else:
 			os.remove(BATCH_FILENAME)
 		print('Saved retrieved data')
@@ -176,8 +166,7 @@ def retrieve_batch():
 	'''
 	if exists_batch():
 		BatchError('Current batch is not finished')
-	with open(BATCH_FOLDER + '/' + OUTPUT_FILENAME, 'r') as readfile:
-		data = json.load(readfile)
+	json_readf(BATCH_FOLDER + '/' + OUTPUT_FILENAME)
 	return(data)
 
 	

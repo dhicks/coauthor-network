@@ -28,5 +28,6 @@ def json_writes(data, ensure_ascii = False, indent = 4, **kwargs):
 	Generate a string for pretty printing of `data`.  
 	By default, `ensure_ascii = False` and `indent = 4`.  
 	'''
-	return json.dumps(data, ensure_ascii = ensure_ascii, indent = indent, **kwargs)
+	return json.dumps(data, ensure_ascii = ensure_ascii, indent = indent, 
+						**kwargs)
 
