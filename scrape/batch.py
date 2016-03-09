@@ -166,7 +166,7 @@ def retrieve_batch():
 	'''
 	if exists_batch():
 		BatchError('Current batch is not finished')
-	json_readf(BATCH_FOLDER + '/' + OUTPUT_FILENAME)
+	data = json_readf(BATCH_FOLDER + '/' + OUTPUT_FILENAME)
 	return(data)
 
 	
