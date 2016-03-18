@@ -271,39 +271,28 @@ if status['3']['start'] == False:
 	# Build the dict to link Scopus IDs to net vertices
 	gt_from_sids = {net.vp['sid'][v]: v for v in net.vertices()}
 	# Define the pmaps for the author data
-	net.vp['name'] = net.new_vp('object')
+	net.vp['surname'] = net.new_vp('string')
+	net.vp['given'] = net.new_vp('string')
 	net.vp['docs'] = net.new_vp('int')
-	net.vp['areas'] = net.new_vp('vector<string>')
+	net.vp['areas'] = net.new_vp('object')
 	net.vp['affiliation'] = net.new_vp('string')
 	net.vp['country'] = net.new_vp('string')
 	
 	# Loop through the authors, writing data from author file to graph
 	for author in author_data:
 		author_node = gt_from_sids[author['sid']]
-		net.vp['name'][author_node] = author['name']
+		net.vp['surname'][author_node] = author['name']['surname']
+		net.vp['given'][author_node] = author['name']['given']
 		net.vp['docs'][author_node] = author['docs']
-		net.vp['areas'][author_node] = author['areas']
+		try:
+			net.vp['areas'][author_node] = [area['#text'] for area in author['areas']]
+		except TypeError:
+			net.vp['areas'][author_node] = [author['areas']['#text']]
 		net.vp['affiliation'][author_node] = author['affiliation']
 		net.vp['country'][author_node] = author['country']
 	
 	# Save as a gt file	
 	net.save(net_outfile_pre + '.gt')
-	
-	# Name and areas need to be reworked to save in graphml
-	# Split name into surname and given name
-	net.vp['surname'] = net.new_vp('string', 
-							vals = [net.vp['name'][v]['surname'] for
-										v in net.vertices()])
-	net.vp['given name'] = net.new_vp('string',
-							vals = [net.vp['name'][v]['given'] for
-										v in net.vertices()])
-	# Remove the old name pmap to avoid read errors
-	del net.vp['name']
-	# Reconstruct affiliation by joining the separate strings
-	affiliation_vec = net.vp['affiliation']
-	net.vp['affiliation'] = net.new_vp('string', 
-							vals = [', '.join(affiliation_vec[v]) for 
-										v in net.vertices()])
 	
 	# Save as a graphml file
 	net.save(net_outfile_pre + '.graphml')
