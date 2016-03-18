@@ -2,6 +2,7 @@
 First run: identify potential duplicates, based on surnames
 Second run: collapse them?
 '''
+import graph_tool as gt
 import json
 import pandas as pd
 import os.path as os
@@ -9,6 +10,9 @@ import unicodedata
 
 datafile = 'combined_metadata.json'
 potential_dupes_file = 'potential_dupes.csv'
+dupes_file = 'dupes.csv'
+net_file_gt = 'coauth_net.gt'
+net_file_graphml = 'coauth_net.graphml'
 
 if not os.exists(potential_dupes_file):
 	# Load the data file
@@ -21,8 +25,8 @@ if not os.exists(potential_dupes_file):
 	del authors_df['areas']
 	del authors_df['docs']
 	# `name` is a column of dicts; break it out
-	authors_df['surname'] = pd.Series([author['name']['surname'] for author in authors])
-	authors_df['given'] = pd.Series([author['name']['given'] for author in authors])
+	authors_df['surname'] = pd.Series([author['surname'] for author in authors])
+	authors_df['given'] = pd.Series([author['given'] for author in authors])
 	# Convert surname to ascii, dropping non-ascii characters
 	#authors_df['surname_ascii'] = authors_df['surname'].str.encode('ascii', 'ignore')
 	authors_df['surname_ascii'] = pd.Series(
@@ -46,35 +50,49 @@ if not os.exists(potential_dupes_file):
 	authors_df.to_csv(potential_dupes_file)
 
 else:
- 	print("You haven't written this branch yet!")
- 	
- 	'''
- 	pseudocode:
- 	
- 	for node1, node2:
- 		define new_node
- 		for metadatum:
- 			if metadatum == 'name':
- 				retrieve preferred name from file
- 			if metadatum == 'areas':
- 				concatenate lists
- 			elif metadatum == 'docs':
- 				take sum
- 			elif metadatum == 'country', 'affiliation', or 'sid':
- 				replace the string with a list
- 			elif metadatum[node1] == metadatum[node2]:
- 				metadatum[new_node] = metadatum[node1]
- 			elif metadatum[node1] == '':
- 				metadatum[new_node] = metadatum[node2]
- 			elif metadatum[node2] == '':
- 				metadatum[new_node] = metadatum[node1]
- 			else:
- 				raise an exception
- 		for node1 edge:
- 			add edge between new_node and target
- 		for node2 edge:
- 			add edge between new_node and target
- 		remove node 1
- 		remove node 2
- 	'''
- 	
+	authors_df = pd.read_csv(dupes_file)
+	net = gt.load_graph(net_file_gt)
+	gt_from_sid = {net.vp['sid'][v]: v for v in net.vertices()}
+
+	for row in authors_df.iterrows():
+		author = row[1]
+		# Identify the nodes to be collapsed
+		sid1 = str(author['sid 1'])
+		sid2 = str(author['sid 2'])
+		print(sid1, sid2)
+		node1 = gt_from_sid[sid1]
+		node2 = gt_from_sid[sid2]
+		
+		# Define the new node
+		node = net.add_vertex()
+		
+		# Consolidate metadata
+		surname = author['surname']
+		given = author['given']
+		net.vp['surname'][node] = surname
+		net.vp['given'][node] = given
+		
+		areas = list(set(net.vp['areas'][node1] + net.vp['areas'][node2]))
+		net.vp['areas'][node] = areas
+
+		net.vp['docs'][node] = net.vp['docs'][node1] + net.vp['docs'][node2]
+		net.vp['country'][node] = [net.vp['country'][node1], net.vp['country'][node2]]
+		net.vp['affiliation'][node] = [net.vp['affiliation'][node1], net.vp['affiliation'][node2]]
+		net.vp['sid'][node] = [sid1, sid2]
+		
+		# Rewire the edges
+		for old_node in [node1, node2]:
+			for edge in old_node.all_edges():
+				#print(edge)
+				if edge.source() == old_node:
+					net.edge(node, edge.target())
+				elif edge.target() == old_node:
+					net.edge(edge.source(), node)
+				net.remove_edge(edge)
+		net.remove_vertex(node1)
+		net.remove_vertex(node2)
+			
+		# Save the net
+		net.save(net_file_gt)
+		net.save(net_file_graphml)
+		
