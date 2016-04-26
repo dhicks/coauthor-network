@@ -8,7 +8,8 @@ import pandas as pd
 import os.path as os
 import unicodedata
 
-datafile = 'combined_metadata.json'
+datafile_in = 'combined_metadata.json'
+datafile_out = 'combined_metadata.csv'
 potential_dupes_file = 'potential_dupes.csv'
 dupes_file = 'dupes.csv'
 net_file_gt = 'coauth_net.gt'
@@ -16,7 +17,7 @@ net_file_graphml = 'coauth_net.graphml'
 
 if not os.exists(potential_dupes_file):
 	# Load the data file
-	with open(datafile) as readfile:
+	with open(datafile_in) as readfile:
 		authors = json.load(readfile)
 
 	# Convert to a Pandas data frame
@@ -25,8 +26,8 @@ if not os.exists(potential_dupes_file):
 	del authors_df['areas']
 	del authors_df['docs']
 	# `name` is a column of dicts; break it out
-	authors_df['surname'] = pd.Series([author['surname'] for author in authors])
-	authors_df['given'] = pd.Series([author['given'] for author in authors])
+	authors_df['surname'] = pd.Series([author['name']['surname'] for author in authors])
+	authors_df['given'] = pd.Series([author['name']['given'] for author in authors])
 	# Convert surname to ascii, dropping non-ascii characters
 	#authors_df['surname_ascii'] = authors_df['surname'].str.encode('ascii', 'ignore')
 	authors_df['surname_ascii'] = pd.Series(
@@ -52,9 +53,10 @@ if not os.exists(potential_dupes_file):
 else:
 	authors_df = pd.read_csv(dupes_file)
 	net = gt.load_graph(net_file_gt)
-	gt_from_sid = {net.vp['sid'][v]: v for v in net.vertices()}
 
 	for row in authors_df.iterrows():
+		gt_from_sid = {net.vp['sid'][v]: v for v in net.vertices()}
+
 		author = row[1]
 		# Identify the nodes to be collapsed
 		sid1 = str(author['sid 1'])
@@ -92,7 +94,27 @@ else:
 		net.remove_vertex(node1)
 		net.remove_vertex(node2)
 			
-		# Save the net
-		net.save(net_file_gt)
-		net.save(net_file_graphml)
-		
+	# Arrange metadata into a dataframe
+	df = pd.DataFrame([{'sid': net.vp['sid'][author],
+						'surname': net.vp['surname'][author],
+						'given': net.vp['surname'][author],
+						'docs': net.vp['docs'][author],
+						'affiliation': net.vp['affiliation'][author],
+						'country': net.vp['country'][author]} 
+					for author in net.vertices()])
+	# Cast areas into columns
+	areas = [net.vp['areas'][vertex] for vertex in net.vertices()]
+	areas_set = {area for sublist in areas for area in sublist}
+	areas_cols = pd.DataFrame.from_dict({area: [area in net.vp['areas'][vertex] 
+							for vertex in net.vertices()]
+						for area in areas_set})
+	# Combine with the rest of the metadata
+	df = pd.concat([df, areas_cols], axis = 1)
+	# Write out to CSV
+	df.to_csv(datafile_out)
+	
+	# Save the net
+	net.save(net_file_gt)
+	del(net.vp['areas'])
+	net.save(net_file_graphml)
+	
