@@ -1,0 +1,34 @@
+---
+output: word_document
+---
+```{r}
+library(cowplot)
+library(knitr)
+
+source('load_data.R')
+
+small_components = mdf %>% filter(component != 1) %>% droplevels()
+
+## Table with number of individuals in each component
+small_components %>% group_by(component) %>% summarize(n = n()) %>% kable
+
+## Individuals, plotted by country and component
+ggplot(data = small_components, aes(component, country, color = country)) + 
+	geom_point(position = 'jitter') +
+	guides(color = FALSE)
+
+## Table
+##  Too big to be useful
+#with(small_components, table(component, country))
+
+## Count of individuals, by country and component
+small_comp_comp_by_country = small_components %>% 
+	group_by(component, country) %>%
+	transmute(count = n())
+
+## Plot
+ggplot(data = small_comp_comp_by_country, 
+	   aes(component, country, fill = count)) +
+	scale_fill_gradient(low = 'yellow', high = 'red') +
+	geom_tile()
+```
