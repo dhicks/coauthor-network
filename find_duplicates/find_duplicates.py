@@ -97,10 +97,11 @@ else:
 	# Arrange metadata into a dataframe
 	df = pd.DataFrame([{'sid': net.vp['sid'][author],
 						'surname': net.vp['surname'][author],
-						'given': net.vp['surname'][author],
+						'given': net.vp['given'][author],
 						'docs': net.vp['docs'][author],
 						'affiliation': net.vp['affiliation'][author],
-						'country': net.vp['country'][author]} 
+						'country': net.vp['country'][author], 
+						'areas': '; '.join(net.vp['areas'][author])} 
 					for author in net.vertices()])
 	# Cast areas into columns
 	areas = [net.vp['areas'][vertex] for vertex in net.vertices()]
@@ -114,6 +115,7 @@ else:
 	df.to_csv(datafile_out)
 	
 	# Save the net
+	#  NB 'areas' is a Python list and not graphml standard
 	net.save(net_file_gt)
 	del(net.vp['areas'])
 	net.save(net_file_graphml)
