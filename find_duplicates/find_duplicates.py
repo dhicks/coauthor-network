@@ -1,6 +1,6 @@
 '''
 First run: identify potential duplicates, based on surnames
-Second run: collapse them?
+Second run: collapse them
 '''
 import graph_tool as gt
 import json
