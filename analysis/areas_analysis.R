@@ -79,5 +79,13 @@ ggplot(data = {country_areas %>% filter(value > 10)},
 	theme(axis.text.x = element_text(hjust = 1, angle = 45), 
 		  axis.text.y = element_text(size = 6))
 
-## Someday this will be a graph
-#country_areas_graph = graph_from_data_frame(country_areas, directed = FALSE)
+## Not actually a useful graph
+# country_areas_graph = graph_from_data_frame(country_areas, directed = FALSE)
+# V(country_areas_graph)$type = bipartite_mapping(country_areas_graph)$type
+# layout = layout_with_sugiyama(country_areas_graph,
+# 							  hgap = 100, vgap = .5)
+# plot(country_areas_graph,
+# 	 vertex.label.cex = .5,
+# 	 vertex.size = 5, vertex.color = V(country_areas_graph)$type,
+# 	 edge.width = E(country_areas_graph)$value,
+# 	 layout = layout$layout)

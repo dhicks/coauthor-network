@@ -1,7 +1,7 @@
+library(cowplot)
 library(dplyr)
 library(igraph)
-
-data_folder = '../2016-04-26/'
+library(knitr)
 
 ## Load metadata CSV file
 mdf_file = paste(data_folder, 'combined_metadata.csv', sep = '')
@@ -68,13 +68,5 @@ graph_stats = data.frame(id = V(graph)$id,
 mdf = left_join(graph_stats, mdf)
 ## Discard the interim variables
 rm(graph_stats, graph_file)
-
-## Restrict to giant component
-mdf = mdf %>% filter(component == 1) %>% droplevels
-graph = induced_subgraph(graph, components(graph)$membership == 1)
-## Identify and remove areas with 0 individuals in the giant component
-drop_areas = mdf %>% select(-(id:docs)) %>% summarize_each(funs(sum)) %>% 
-	reshape2::melt() %>% filter(value == 0) %>% .[['variable']] %>% as.character
-mdf = mdf %>% select(-one_of(drop_areas))
 
 
