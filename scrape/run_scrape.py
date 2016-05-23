@@ -41,13 +41,17 @@ for each giant component:
 	save to disk
 '''
 
-import batch
+if __name__ == '__main__':
+	import batch
+	from scrape import *
+else:
+	import scrape.batch as batch
+	from scrape.scrape import *
 import csv
 import graph_tool as gt
 from json_rw import *
 import os
 import random
-from scrape import *
 import sys
 import time
 
