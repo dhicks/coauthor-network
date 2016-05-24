@@ -18,15 +18,11 @@ combine coauthor lists
 
 <2a>
 build network
-filter down to giant components
-extract list of GC authors
+filter based on distance from initial authors
+extract list of authors
 
 <2b>
-for each GC author:
-	retrieve metadata
-	write metadata into network node
-identify recurrent surnames for manual collapsing
-save to disk
+retrieve metadata for each author
 
 <3>
 write author metadata into graph
@@ -67,7 +63,7 @@ combined_sids_file = 'combined_sids.json'
 author_data_file = 'combined_metadata.json'
 net_outfile_pre = 'coauth_net'
 
-max_dist = 1	# Maximum distance from generation 1 to include in the final net
+max_dist = 2	# Maximum distance from generation 1 to include in the final net
 
 print('Run started at ' + time.strftime('%c', time.localtime()))
 
@@ -174,6 +170,10 @@ if status['1b']['finish'] == False:
 		# Finished with step 1b
 		status['1b']['finish'] = True
 		json_writef(status, status_file)
+
+## Step 2: Build network
+## Step 2a: Build network; filter based on distance from initial authors; 
+##  extract list of authors
 			
 if status['2a']['start'] == False:
 	# Load files with coauthor pairings
@@ -230,6 +230,8 @@ if status['2a']['start'] == False:
 	status['2a']['start'] = True
 	status['2a']['finish'] = True
 	json_writef(status, status_file)
+
+## Step 2b: Retrieve metadata for each author
 		
 if status['2b']['start'] == False:
 	# Load SIDs to retrieve metadata for
@@ -267,6 +269,8 @@ if status['2b']['finish'] == False:
 		# Finished with step 2b
 		status['2b']['finish'] = True
 		json_writef(status, status_file)
+
+## Step 3: Write author metadata into graph
 
 if status['3']['start'] == False:
 	# Load the author data and temporary graph file
