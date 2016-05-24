@@ -22,6 +22,7 @@ if sys.version_info[0] < 3:
 
 from importlib import reload
 import os
+import shutil
 
 ## Drop down to a subfolder to keep the output files tidy
 os.chdir('files')
@@ -48,6 +49,18 @@ Outputs:
 '''
 
 from scrape import run_scrape
+## Cleanup
+try:
+	os.remove('sids.json')
+	os.remove('coauth_net.temp.graphml')
+	os.remove('coauth_net.temp.gt')
+	os.remove('combined_sids.json')
+	os.remove('status.json')
+	os.remove('gen_1_coauth.json')
+	os.remove('gen_2_coauth.json')
+	shutil.rmtree('batch')
+except OSError:
+	print('Error trying to clean up working files; skipping cleanup')
 
 '''
 Scopus contains duplicates — two distinct ID numbers — for some individuals.  
@@ -83,4 +96,4 @@ Outputs:
 	corresponding to each encoded ID string.
 '''
 
-import sanitize.py
+#import sanitize
