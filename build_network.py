@@ -23,8 +23,11 @@ if sys.version_info[0] < 3:
 from importlib import reload
 import os
 
-## Drop down to a subfolder to keep the files tidy
+## Drop down to a subfolder to keep the output files tidy
 os.chdir('files')
+
+## ----------
+## The actual construction process starts here
 
 '''
 Start with a `Scopus IDs.csv` containing a column `Author 1 SID` of author 
@@ -63,6 +66,21 @@ Outputs:
 '''
 
 from find_duplicates import find_duplicates
-input('Identify duplicates and press Enter to continue')
+input('Identify duplicates in "potential_dupes.csv" and press Enter to continue')
 from find_duplicates import collapse_duplicates
 
+'''
+Finally, we sanitize the output files — replacing surname, given name, and 
+Scopus IDs with encoded ID strings.  The resulting data files can be shared
+publicly without disclosing PII. 
+
+Outputs:
+`combined_metadata.csv`: A CSV containing the author-level metadata
+	The column `sidr` contains the encoded ID strings.  
+`coauth_net.gt`: The coauthor network, in graph-tool's binary format
+`coauth_net.graphml`: The coauthor network, in widely-supported graphml format
+`pii.csv`: A CSV containing the surname, given name, and Scopus ID
+	corresponding to each encoded ID string.
+'''
+
+import sanitize.py
