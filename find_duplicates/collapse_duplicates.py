@@ -16,10 +16,15 @@ net = gt.load_graph(net_file_gt)
 
 for row in authors_df.iterrows():
 	gt_from_sid = {net.vp['sid'][v]: v for v in net.vertices()}
-	#gt_from_sid['56134023100']
-
+	
 	author = row[1]
+	print(author['surname'])
 	# Identify the nodes to be collapsed
+	# 	NB If Python returns an error here that the SID isn't found, 
+	#	for a SID that was included in the initial `Scopus IDs.csv`, 
+	#	it may be that the API returned an error during the coauthor
+	#	search, and consequently the SID was dropped. 
+	#	Check `combined_metadata.json` for the SID. 
 	sids = author['sids'].split(';')
 	nodes = [gt_from_sid[sid] for sid in sids]
 	
@@ -49,9 +54,8 @@ for row in authors_df.iterrows():
 				elif edge.target() == old_node:
 					net.edge(edge.source(), new_node)
 				net.remove_edge(edge)
-	for old_node in nodes:
-		net.remove_vertex(old_node)
-		
+	net.remove_vertex(nodes)
+
 # Arrange metadata into a dataframe
 df = pd.DataFrame([{'sid': net.vp['sid'][author],
 					'surname': net.vp['surname'][author],
