@@ -4,54 +4,93 @@ Collapse identified duplicates
 
 import graph_tool as gt
 import pandas as pd
+import numpy as np
 
 datafile_out = 'combined_metadata.csv'
 dupes_file = 'dupes.csv'
 net_file_gt = 'coauth_net.gt'
 net_file_graphml = 'coauth_net.graphml'
 
-authors_df = pd.read_csv(dupes_file)
+authors_df = pd.read_csv(dupes_file, dtype = {'sid 3': str})
 net = gt.load_graph(net_file_gt)
 
 for row in authors_df.iterrows():
 	gt_from_sid = {net.vp['sid'][v]: v for v in net.vertices()}
+	gt_from_sid['56134023100']
 
 	author = row[1]
 	# Identify the nodes to be collapsed
 	sid1 = str(author['sid 1'])
 	sid2 = str(author['sid 2'])
-	print(sid1, sid2)
-	node1 = gt_from_sid[sid1]
-	node2 = gt_from_sid[sid2]
+	sid3 = str(author['sid 3'])
+	print(sid1, sid2, sid3)
+	if sid3 == 'nan':
+		node1 = gt_from_sid[sid1]
+		node2 = gt_from_sid[sid2]
 	
-	# Define the new node
-	node = net.add_vertex()
+		# Define the new node
+		node = net.add_vertex()
 	
-	# Consolidate metadata
-	surname = author['surname']
-	given = author['given']
-	net.vp['surname'][node] = surname
-	net.vp['given'][node] = given
+		# Consolidate metadata
+		surname = author['surname']
+		given = author['given']
+		net.vp['surname'][node] = surname
+		net.vp['given'][node] = given
 	
-	areas = list(set(net.vp['areas'][node1] + net.vp['areas'][node2]))
-	net.vp['areas'][node] = areas
+		areas = list(set(net.vp['areas'][node1] + net.vp['areas'][node2]))
+		net.vp['areas'][node] = areas
 
-	net.vp['docs'][node] = net.vp['docs'][node1] + net.vp['docs'][node2]
-	net.vp['country'][node] = [net.vp['country'][node1], net.vp['country'][node2]]
-	net.vp['affiliation'][node] = [net.vp['affiliation'][node1], net.vp['affiliation'][node2]]
-	net.vp['sid'][node] = [sid1, sid2]
+		net.vp['docs'][node] = net.vp['docs'][node1] + net.vp['docs'][node2]
+		net.vp['country'][node] = [net.vp['country'][node1], net.vp['country'][node2]]
+		net.vp['affiliation'][node] = [net.vp['affiliation'][node1], net.vp['affiliation'][node2]]
+		net.vp['sid'][node] = [sid1, sid2]
 	
-	# Rewire the edges
-	for old_node in [node1, node2]:
-		for edge in old_node.all_edges():
-			#print(edge)
-			if edge.source() == old_node:
-				net.edge(node, edge.target())
-			elif edge.target() == old_node:
-				net.edge(edge.source(), node)
-			net.remove_edge(edge)
-	net.remove_vertex(node1)
-	net.remove_vertex(node2)
+		# Rewire the edges
+		for old_node in [node1, node2]:
+			for edge in old_node.all_edges():
+				print(net.vp['sid'][edge.source()], net.vp['sid'][edge.target()])
+				if edge.source() == old_node:
+					net.edge(node, edge.target())
+				elif edge.target() == old_node:
+					net.edge(edge.source(), node)
+				net.remove_edge(edge)
+		net.remove_vertex(node1)
+		net.remove_vertex(node2)
+	else:
+		node1 = gt_from_sid[sid1]
+		node2 = gt_from_sid[sid2]
+		node3 = gt_from_sid[sid3]
+	
+		# Define the new node
+		node = net.add_vertex()
+	
+		# Consolidate metadata
+		surname = author['surname']
+		given = author['given']
+		net.vp['surname'][node] = surname
+		net.vp['given'][node] = given
+	
+		areas = list(set(net.vp['areas'][node1] + net.vp['areas'][node2] + net.vp['areas'][node3]))
+		net.vp['areas'][node] = areas
+
+		net.vp['docs'][node] = net.vp['docs'][node1] + net.vp['docs'][node2] + net.vp['docs'][node3]
+		net.vp['country'][node] = [net.vp['country'][node1], net.vp['country'][node2], net.vp['country'][node3]]
+		net.vp['affiliation'][node] = [net.vp['affiliation'][node1], net.vp['affiliation'][node2], net.vp['affiliation'][node3]]
+		net.vp['sid'][node] = [sid1, sid2, sid3]
+	
+		# Rewire the edges
+		for old_node in [node1, node2, node3]:
+			for edge in old_node.all_edges():
+				#print(edge)
+				if edge.source() == old_node:
+					net.edge(node, edge.target())
+				elif edge.target() == old_node:
+					net.edge(edge.source(), node)
+				net.remove_edge(edge)
+		net.remove_vertex(node1)
+		net.remove_vertex(node2)
+		net.remove_vertex(node3)
+
 		
 # Arrange metadata into a dataframe
 df = pd.DataFrame([{'sid': net.vp['sid'][author],

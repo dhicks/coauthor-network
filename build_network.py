@@ -39,6 +39,7 @@ import get_sids
 
 '''
 Run `run_scrape` to scrape the author data and build the network. 
+
 Outputs: 
 `gen_1_coauth.json`: Coauthor pairs starting with generation 1
 `gen_1_coauth.json`: Coauthor pairs starting with generation 2
@@ -49,6 +50,7 @@ Outputs:
 '''
 
 from scrape import run_scrape
+
 ## Cleanup
 try:
 	os.remove('sids.json')

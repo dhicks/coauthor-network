@@ -103,6 +103,8 @@ def _parse_auth_data(response_raw):
 		# Country
 		if 'address' not in affiliation_dict:
 			country = ''
+		elif affiliation_dict['address'] is None:
+			country = ''
 		else:
 			if 'country' in affiliation_dict['address']:
 				country = affiliation_dict['address']['country']

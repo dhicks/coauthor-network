@@ -26,15 +26,6 @@ retrieve metadata for each author
 
 <3>
 write author metadata into graph
-
-
-for each giant component:
-	run community detection
-	write community memberships into network
-	calculate betweenness centralities
-	write centralities, degree into network
-	plot
-	save to disk
 '''
 
 if __name__ == '__main__':
@@ -63,7 +54,7 @@ combined_sids_file = 'combined_sids.json'
 author_data_file = 'combined_metadata.json'
 net_outfile_pre = 'coauth_net'
 
-max_dist = 2	# Maximum distance from generation 1 to include in the final net
+max_dist = 1	# Maximum distance from generation 1 to include in the final net
 
 print('Run started at ' + time.strftime('%c', time.localtime()))
 
