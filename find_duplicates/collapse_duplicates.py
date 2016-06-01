@@ -51,9 +51,9 @@ for row in authors_df.iterrows():
 		for edge in old_node.all_edges():
 				print(net.vp['sid'][edge.source()], net.vp['sid'][edge.target()])
 				if edge.source() == old_node:
-					net.edge(new_node, edge.target())
+					net.edge(new_node, edge.target(), add_missing = True)
 				elif edge.target() == old_node:
-					net.edge(edge.source(), new_node)
+					net.edge(edge.source(), new_node, add_missing = True)
 				net.remove_edge(edge)
 	net.remove_vertex(nodes)
 
