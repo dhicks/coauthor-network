@@ -13,6 +13,7 @@ net_file_graphml = 'coauth_net.graphml'
 
 authors_df = pd.read_csv(dupes_file)
 net = gt.load_graph(net_file_gt)
+net.save(net_file_gt + '.precollapse')
 
 for row in authors_df.iterrows():
 	gt_from_sid = {net.vp['sid'][v]: v for v in net.vertices()}
