@@ -226,7 +226,9 @@ if status['2a']['start'] == False:
 		
 if status['2b']['start'] == False:
 	# Load SIDs to retrieve metadata for
-	combined_sids = json_readf(combined_sids_file)
+	#  This includes every node in the network, 
+	#  plus all of the manually identified SIDs
+	combined_sids = list(set(json_readf(combined_sids_file) + json_readf(sids_infile)))
 	
 	print(str(len(combined_sids)) + ' authors to retrieve')
 	if not batch.exists_batch():
@@ -244,7 +246,7 @@ if status['2b']['finish'] == False:
 		print('Running author metadata batch')
 		batch_response = batch.run_batch(get_auth_data_by_sid)
 		
-	# If the batch finished on this run, or previously, exists_batch will return FAlse
+	# If the batch finished on this run, or previously, exists_batch will return False
 	if batch.exists_batch():
 		# Exit gracefully
 		print('Finished the current batch run; batch not finished')

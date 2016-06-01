@@ -21,13 +21,11 @@ for row in authors_df.iterrows():
 	author = row[1]
 	print(author['surname'])
 	# Identify the nodes to be collapsed
-	# 	NB If Python returns an error here that the SID isn't found, 
-	#	for a SID that was included in the initial `Scopus IDs.csv`, 
-	#	it may be that the API returned an error during the coauthor
-	#	search, and consequently the SID was dropped. 
-	#	Check `combined_metadata.json` for the SID. 
 	sids = author['sids'].split(';')
-	nodes = [gt_from_sid[sid] for sid in sids]
+	nodes = [gt_from_sid[sid] for sid in sids if sid in gt_from_sid]
+	if len(nodes) < 2:
+		print('\t', 'Not enough SIDs to collapse')
+		continue
 	
 	# Define the new node
 	new_node = net.add_vertex()
