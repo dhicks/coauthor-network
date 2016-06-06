@@ -38,7 +38,9 @@ Scopus IDs. Run `get_sids` to build a list `sids.json` of SIDs to retrieve.
 import get_sids
 
 '''
-Run `run_scrape` to scrape the author data and build the network. 
+Run `run_scrape` to scrape the author data and build the network. This library
+is robust to errors and scraping data over multiple sessions.  To resume 
+scraping, simply run `build_network` again.  
 
 Outputs: 
 `gen_1_coauth.json`: Coauthor pairs starting with generation 1
@@ -70,9 +72,11 @@ Run `find_duplicates` to generate the list of potential duplicates.
 Open `potential_dupes.csv` and review table to identify actual duplicates.  
 The file `dupes.csv` should follow this pattern:  
 
-| surname 	| given 	| sid 1			| sid 2			|
-| Babi_		| Sandra	| 7004766561	| 54408195900 	|
-| Dang		| Duc Huy	| 56034688700	| 56454919100	|
+| surname 	| given 	| sids						|
+| Babi_		| Sandra	| 7004766561;54408195900 	|
+| Dang		| Duc Huy	| 56034688700;56454919100	|
+
+Note that the distinct SIDs should be separated with *semicolons*.  
 
 Outputs: 
 `combined_metadata.csv`: A CSV containing the author-level metadata

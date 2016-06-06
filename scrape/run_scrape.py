@@ -281,7 +281,12 @@ if status['3']['start'] == False:
 	
 	# Loop through the authors, writing data from author file to graph
 	for author in author_data:
-		author_node = gt_from_sids[author['sid']]
+		if author['sid'] in gt_from_sids:
+			author_node = gt_from_sids[author['sid']]
+		else:
+			author_node = net.add_vertex()
+			net.vp['sid'][author_node] = author['sid']
+			gt_from_sids[author['sid']] = author_node
 		net.vp['surname'][author_node] = author['name']['surname']
 		net.vp['given'][author_node] = author['name']['given']
 		net.vp['docs'][author_node] = author['docs']

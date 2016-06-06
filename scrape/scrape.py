@@ -28,6 +28,8 @@ def _parse_coauth_data(sid, response_raw):
 	'''
 	# Convert the xml response to a dict to make it easier to parse
 	response = json.loads(response_raw)
+	if len(response) == 0:
+		return([])
 	#print 'parsed to dict'
 	# This branch catches error codes in the response
 	if 'service-error' in response:
@@ -126,11 +128,11 @@ def _get_query(query):
 	:return: The requests.get response
 	'''
 	# Timeout for HTTP requests
-	TIMEOUT = 60
+	TIMEOUT = 2*60
 	# Delay, in seconds, after receiving a timeout
-	DELAY = 3*60
+	DELAY = 2*60
 	# Maximum number of attempts to make before throwing an error
-	MAX_ATTEMPTS = 5
+	MAX_ATTEMPTS = 2
 	
 	attempts = 0
 	while (attempts < MAX_ATTEMPTS):
@@ -144,7 +146,9 @@ def _get_query(query):
 			print('Request timed out.  Cooldown for ' + str(DELAY) + ' seconds.')
 			time.sleep(DELAY)
 	else:
-		raise requests.exceptions.Timeout('Maximum number of requests')
+		#raise requests.exceptions.Timeout('Maximum number of requests')
+		print('Maximum number of attempts for this URL')
+		return json.dumps('')
 
 
 def get_coauths_by_sid(sid):
