@@ -73,7 +73,7 @@ areas_cols = pd.DataFrame.from_dict({area: [area in net.vp['areas'][vertex]
 # Combine with the rest of the metadata
 df = pd.concat([df, areas_cols], axis = 1)
 # Write out to CSV
-df.to_csv(datafile_out)
+df.to_csv(datafile_out, index = False)
 
 # Save the net
 #  NB 'areas' is a Python list and not graphml standard

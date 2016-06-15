@@ -44,4 +44,4 @@ del authors_df['name']
 
 # Write to a CSV for manual checking
 #print(authors_df)
-authors_df.to_csv(potential_dupes_file)
+authors_df.to_csv(potential_dupes_file, index = False)
