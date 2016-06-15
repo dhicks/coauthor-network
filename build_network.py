@@ -102,4 +102,27 @@ Outputs:
 	corresponding to each encoded ID string.
 '''
 
-#import sanitize
+import sanitize
+
+'''
+`combined_metadata` Codebook
+
+After sanitization, `combined_metadata.csv` contains a header row and one row for each author in the network.  It has the following variables for each author:  
+
+- [unlabeled]
+	An index column (integer)
+	This index will be consistent across `combined_metadata.csv`, `pii.csv`, 
+	and the two network files.  
+- affiliation
+	The author's institutional affiliation (string)
+- areas
+	A semicolon-separated list of research areas, topics, or keywords (string)
+- country
+	The author's country affiliation (string)
+- docs
+	The total number of documents attributed to the author (integer)
+- [area columns]
+	One column for each area, topic, or keyword (Boolean)
+- sidr
+	A sanitized version of the author's SID (string)
+'''
