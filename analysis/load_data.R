@@ -10,6 +10,10 @@ mdf = read.csv(mdf_file, stringsAsFactors = FALSE)
 ## Coerce area columns to logical
 mdf_areas = mdf %>% select(-(X:surname)) %>% sapply(function (x) x == 'True')
 
+## Fix Kosovars
+kosovar_affiliations = c('Universiteti i Prishtines', 'Consulate of the Republic of Kosovo')
+mdf[mdf$affiliation %in% kosovar_affiliations,]$country = 'Kosovo'
+
 ## Fix the country levels
 fix_country_levels = function (level) {
 	if (level == '') {
@@ -21,7 +25,9 @@ fix_country_levels = function (level) {
 	} else if (grepl('\\[', level)) {
 		countries = regmatches(level, gregexpr("'[^']*'", level))[[1]]
 		countries = gsub("'", "", countries)
-		if (countries[1] == '') {
+		if (length(countries) == 1) {
+			level = countries
+		} else if (countries[1] == '') {
 			level = countries[2]
 		} else if (countries[1] == countries[2]) {
 			level = countries[1]

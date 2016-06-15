@@ -2,7 +2,7 @@
 title: "(papertitle)"
 author: "Maryann Cairns, Daniel J. Hicks"
 subtitle: S1 Reproducible Analysis
-output: word_document
+output: html_document
 ---
 
 TODO: 
@@ -16,7 +16,7 @@ This document provides fully reproducible source code for our entire analysis, i
 - `layout.graphml`: the layout for plotting the coauthor network
 
 ```{r setup, cache = FALSE, echo = FALSE, message=FALSE, warning=FALSE}
-data_folder = '../2016-04-26/'
+data_folder = '../2016-06-06/'
 source('load_data.R')
 
 opts_chunk$set(fig.path = 'figure/', 
@@ -33,21 +33,24 @@ sessionInfo()
 
 # Countries by Components #
 
-Since the next section restricts the graph to the giant component, here we compare countries to distinct disconnected components of the graph.  
+Since the sections below restrict the graph to the giant component, here we compare countries to distinct disconnected components of the graph.  
 
 ```{r country_component}
 country_comp_df = mdf %>% group_by(country, component) %>% summarize(n = n())
 
 ggplot(data = country_comp_df, aes(x = component, y = country, fill = n)) + 
 	geom_tile() + 
-	scale_fill_gradient(low = 'yellow', high = 'red')
+	scale_fill_gradient(low = 'yellow', high = 'red') +
+	scale_x_continuous(breaks = seq(1, max(country_comp_df$component), by = 2)) +
+	theme(axis.text.y = element_text(size = 3))
 
 western_balkans = c('Albania', 'Serbia', 'Montenegro', 'Macedonia', 'Kosovo', 'Bosnia and Herzegovina')
 
 ggplot(data = filter(country_comp_df, country %in% western_balkans), 
 	   aes(x = component, y = country, fill = n)) + 
 	geom_tile() + 
-	scale_fill_gradient(low = 'yellow', high = 'red')
+	scale_fill_gradient(low = 'yellow', high = 'red') +
+	scale_x_continuous(breaks = seq(1, max(country_comp_df$component), by = 2))
 ```
 
 
@@ -57,7 +60,7 @@ This section plots the coauthor network.
 
 ```{r plot_net, dpi=600}
 ## Load a layout developed in Gephi
-layout_file = paste(data_folder, 'layout.graphml', sep = '')
+layout_file = paste(data_folder, 'layout.yh.graphml', sep = '')
 graph_layout = read_graph(layout_file, format = 'graphml')
 ## Copy into the graph
 V(graph)$x = V(graph_layout)$x
@@ -70,7 +73,7 @@ rm(graph_layout)
 mdf = mdf %>% filter(component == 1) %>% droplevels
 graph = induced_subgraph(graph, components(graph)$membership == 1)
 ## Identify and remove areas with 0 individuals in the giant component
-drop_areas = mdf %>% select(-(id:docs)) %>% summarize_each(funs(sum)) %>% 
+drop_areas = mdf %>% select(-(id:docs)) %>% summarize_each(funs(sum)) %>%
 	reshape2::melt() %>% filter(value == 0) %>% .[['variable']] %>% as.character
 mdf = mdf %>% select(-one_of(drop_areas))
 ## ----------
@@ -88,17 +91,18 @@ V(graph)$btwn = betweenness(graph, normalized = TRUE)
 ##  NB use vertex.label.cex = .4
 #tikz(paste(data_folder, 'graph.tex', sep = ''),standAlone = TRUE)
 ## Output to high-res PNG
-##  NB use vertex.label.cex = 2
 #png(filename = paste(data_folder, 'graph.png', sep = ''), width = 4000, height = 4000)
-plot(graph, 
-	 vertex.size = 2 + 30 * V(graph)$btwn, 
-	 vertex.color = communities$membership, 
-	 #vertex.label = V(graph)$country, 
-	 vertex.label = V(graph)$surname,
-	 vertex.label.cex = .2,
-	 vertex.label.color = 'black',
+plot(graph,
+	 vertex.size = 2 + 30 * V(graph)$btwn,
+	 #vertex.color = communities$membership,
+	 vertex.color = as.factor(V(graph)$country %in% western_balkans),
+	 vertex.frame.color = NA,
 	 #vertex.label = NA,
-	 edge.width = .5, edge.curved = TRUE)
+	 vertex.label = V(graph)$country,
+	 #vertex.label = V(graph)$surname,
+	 vertex.label.cex = (.1 + 1 * V(graph)$btwn),
+	 vertex.label.color = 'black',
+	 edge.width = .5, edge.curved = FALSE)
 #dev.off()
 ```
 
@@ -121,11 +125,15 @@ ggplot(data = mdf, aes(x = deg, y = btwn)) +
 	scale_x_log10(name = 'degree') + 
 	scale_y_log10(name = 'centrality')
 
+summary(lm(data = filter(mdf, btwn > 0), log(btwn) ~ log(deg)))
+
 ## Number of documents and betweenness centrality
 ggplot(data = mdf, aes(x = docs, y = btwn)) +
 	geom_point() + stat_smooth(method = 'lm') +
 	scale_x_log10(name = 'publications') +
 	scale_y_log10(name = 'centrality')
+
+summary(lm(data = filter(mdf, btwn > 0, docs > 0), log(btwn) ~ log(docs)))
 ```
 
 
@@ -364,10 +372,18 @@ areas_coverage = function (areas) {
 areas_list = list(areas_15 = areas_15, areas_30 = areas_30, areas_45 = areas_45)
 areas_coverage_df = data.frame(
 						areas = sapply(areas_list, areas_to_string),
-						coverage = 10 * sapply(areas_list, areas_coverage)
+						coverage = 100 * sapply(areas_list, areas_coverage)
 )
 
 areas_coverage_df %>% kable(digits = 0)
+```
+
+```{r areas_wb}
+## Top 15 areas in the Western Balkans
+areas_15_wb = mdf %>% filter(country %in% western_balkans) %>%
+	select(one_of(areas)) %>% summarize_each('sum') %>% 
+	sort(decreasing = TRUE) %>% names %>% head(n=15)
+areas_15_wb
 ```
 
 Next we use heatmaps to compare countries and areas.  
@@ -396,12 +412,21 @@ ggplot(data = filter(country_areas, variable %in% areas_45),
 		  axis.text.y = element_text(size = 4))
 
 ## Heatmap:  countries and areas with more than a certain number of individuals
-ggplot(data = {country_areas %>% filter(value > 10)}, 
+# ggplot(data = {country_areas %>% filter(value > 10)}, 
+# 	   aes(country, variable, fill = value)) +
+# 	geom_tile() + 
+# 	scale_fill_gradient(low = 'yellow', high = 'red')+
+# 	theme(axis.text.x = element_text(hjust = 1, angle = 45), 
+# 		  axis.text.y = element_text(size = 2))
+
+## Heatmap:  Western Balkans and top 45 areas
+ggplot(data = {country_areas %>% filter(country %in% western_balkans, variable %in% areas_45)}, 
 	   aes(country, variable, fill = value)) +
 	geom_tile() + 
-	scale_fill_gradient(low = 'yellow', high = 'red')+
-	theme(axis.text.x = element_text(hjust = 1, angle = 45), 
-		  axis.text.y = element_text(size = 2))
+	scale_fill_gradient(low = 'yellow', high = 'red', name = 'no.\nauthors') +
+	xlab('') + ylab('') +
+	theme(axis.text.x = element_text(hjust = 1, angle = 20), 
+		  axis.text.y = element_text(size = 6))
 ```
 
 
@@ -409,7 +434,7 @@ ggplot(data = {country_areas %>% filter(value > 10)},
 
 *Missed connections* are pairs of individuals who have similar research interests (similar areas), but are distant in the coauthor network.  This distance may be due to collaborations that Scopus is not aware of, or it may be due to actual social distance.  We operationalize missed connections using a nonlinear predictor (a Generalized Additive Model) that regresses actual network distance against area similarity.  A pair is a missed connection when the actual network distance is more than 3.5 times the distance predicted based on area similarity.  
 
-```{r missed_connections}
+```{r missed_connections, eval=TRUE}
 ## Calculate distance based on areas
 areas = mdf %>% select(-(id:docs)) %>% names
 areas_based_dist = dist({mdf %>% select(one_of(areas))}, method = 'binary') %>%
@@ -443,19 +468,19 @@ ggplot(data = filter(dist_df, Var1 < Var2),
 	xlab('areas-based distance') + ylab('network-based distance')
 
 ## Extract the missed connections
-missed_df = dist_df %>% filter(missed.connection)
-
-who_is = function (sid) {
-	sid = as.character(sid)
-	mdf[which(mdf$sid == sid), c('sid', 'given', 'surname', 'country')]
-}
-
-var1_df = lapply(missed_df[['Var1']], who_is) %>% do.call(rbind, .)
-names(var1_df) = c('Var1', 'given.1', 'surname.1', 'country.1')
-
-var2_df = lapply(missed_df[['Var2']], who_is) %>% do.call(rbind, .)
-names(var2_df) = c('Var2', 'given.2', 'surname.2', 'country.2')
-
-missed_df = left_join(missed_df, cbind(var1_df, var2_df))
-rm(who_is, var1_df, var2_df)
+# missed_df = dist_df %>% filter(missed.connection)
+# 
+# who_is = function (sid) {
+# 	sid = as.character(sid)
+# 	mdf[which(mdf$sid == sid), c('sid', 'given', 'surname', 'country')]
+# }
+# 
+# var1_df = lapply(missed_df[['Var1']], who_is) %>% do.call(rbind, .)
+# names(var1_df) = c('Var1', 'given.1', 'surname.1', 'country.1')
+# 
+# var2_df = lapply(missed_df[['Var2']], who_is) %>% do.call(rbind, .)
+# names(var2_df) = c('Var2', 'given.2', 'surname.2', 'country.2')
+# 
+# missed_df = left_join(missed_df, cbind(var1_df, var2_df))
+# rm(who_is, var1_df, var2_df)
 ```
