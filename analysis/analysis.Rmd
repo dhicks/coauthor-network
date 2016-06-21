@@ -125,20 +125,22 @@ nrow(mdf)
 mdf %>% select(surname, given, affiliation, country, deg, docs, btwn) %>% arrange(desc(btwn)) %>% head(10) %>% kable
 
 ## Degree and betweenness centrality
-ggplot(data = mdf, aes(x = deg, y = btwn)) +
+deg_btwn_plot = ggplot(data = mdf, aes(x = btwn, y = deg)) +
 	geom_point() + stat_smooth(method = 'lm') +
-	scale_x_log10(name = 'degree') + 
-	scale_y_log10(name = 'centrality')
-
+	scale_y_log10(name = 'degree') + 
+	scale_x_log10(name = 'centrality')
+deg_btwn_plot
 summary(lm(data = filter(mdf, btwn > 0), log(btwn) ~ log(deg)))
 
 ## Number of documents and betweenness centrality
-ggplot(data = mdf, aes(x = docs, y = btwn)) +
+docs_btwn_plot = ggplot(data = mdf, aes(x = btwn, y = docs)) +
 	geom_point() + stat_smooth(method = 'lm') +
-	scale_x_log10(name = 'publications') +
-	scale_y_log10(name = 'centrality')
-
+	scale_y_log10(name = 'publications') +
+	scale_x_log10(name = 'centrality')
+docs_btwn_plot
 summary(lm(data = filter(mdf, btwn > 0, docs > 0), log(btwn) ~ log(docs)))
+
+plot_grid(deg_btwn_plot, docs_btwn_plot, ncol = 1, labels = 'AUTO') 
 ```
 
 
@@ -185,11 +187,14 @@ country_df %>% select(country, n_authors, btwn_sum, btwn_median) %>% arrange(des
 	filter(btwn_sum > 0) %>%
 	kable(digits = 2)
 ggplot(data = filter(country_df, btwn_sum > max(btwn_sum)/100), 
-	   aes(x = reorder(country, btwn_sum), y = btwn_sum, fill = country)) +
+	   aes(x = reorder(country, btwn_sum), y = btwn_sum, 
+	   	fill = reorder(country, desc(btwn_sum)))) +
 	geom_bar(stat = 'identity') +
-	xlab('country') + 
+	xlab('') + 
 	ylab('aggregate centrality') +
 	guides(fill = FALSE) +
+	#scale_fill_brewer(palette = 'Set1') +
+	scale_fill_manual(values = rep(brewer.pal(9, 'Set1'), 2)) +
 	coord_flip()
 
 ## Countries, by descending median centrality
@@ -260,7 +265,7 @@ country_stats_plot_3
 plot_grid(country_stats_plot_1, 
 		  plot_grid(country_stats_plot_2, country_stats_plot_3, 
 		  		  labels = c('B', 'C'), align = 'hv'),
-		  labels = c('A', ''), ncol = 1, rel_heights = c(2, 1))
+		  labels = c('A', ''), ncol = 1, rel_heights = c(1, 1))
 ```
 
 
@@ -426,8 +431,10 @@ ggplot(data = filter(country_areas, variable %in% areas_45),
 # 		  axis.text.y = element_text(size = 2))
 
 ## Heatmap:  Western Balkans and top 45 areas
-ggplot(data = {country_areas %>% filter(country %in% western_balkans, variable %in% areas_45)}, 
-	   aes(country, variable, fill = value)) +
+ggplot(data = {country_areas %>% filter(country %in% western_balkans, 
+										variable %in% areas_45) %>%
+				mutate(variable = gsub('\\.', ' ', variable))}, 
+	   aes(country, reorder(variable, desc(variable)), fill = value)) +
 	geom_tile() + 
 	scale_fill_gradient(low = 'yellow', high = 'red', name = 'no.\nauthors') +
 	xlab('') + ylab('') +
@@ -447,46 +454,59 @@ areas_based_dist = dist({mdf %>% select(one_of(areas))}, method = 'binary') %>%
 	as.matrix()
 dimnames(areas_based_dist) = list(mdf$sid, mdf$sid)
 ## Melt into dataframe
-dist_df = reshape2::melt(areas_based_dist, value.name = 'areas.distance', 
+dist_df = melt(areas_based_dist, value.name = 'areas.distance', 
 						 as.is = TRUE)
 
 ## Calculate distance based on graph
 paths_dist = shortest.paths(graph)
 dimnames(paths_dist) = list(V(graph)$sid, V(graph)$sid)
 ## Melt into dataframe and join with the areas-based distance
-dist_df = reshape2::melt(paths_dist, value.name = 'path.distance', as.is = TRUE) %>% 
+dist_df = melt(paths_dist, value.name = 'path.distance', as.is = TRUE) %>% 
 	full_join(dist_df)
 ## Fit a GAM, and use its predictions to identify missed connections
 dist_df$path.dist.pred = 
 	gam(path.distance ~ s(areas.distance, bs = 'cs'), 
 		data = dist_df)$fitted.values
-dist_df = dist_df %>% mutate(missed.connection = path.distance > 3.5 * path.dist.pred)
+dist_df = dist_df %>% mutate(missed.connection = path.distance > 2.5 * path.dist.pred)
 ## Clean up
 rm(areas_based_dist, paths_dist)
+
+## How many missed connections?
+dist_df %>% filter(Var1 < Var2, missed.connection) %>% nrow()
 
 ## Plotting areas vs. path distance, the smooth, and missed connections
 ggplot(data = filter(dist_df, Var1 < Var2), 
 	   aes(areas.distance, path.distance)) + 
-	geom_point(aes(color = missed.connection), alpha = .05) + 
-	scale_color_brewer(palette = 'Set1', 
-					   guide = FALSE) +
+	geom_point(aes(color = missed.connection, alpha = missed.connection), 
+			   position = 'jitter') + 
+	scale_color_brewer(palette = 'Set1', guide = FALSE) +
+	scale_alpha_discrete(range = c(.01, 1), guide = FALSE) +
 	geom_line(aes(areas.distance, path.dist.pred), alpha = 1, size = 2) +
 	xlab('areas-based distance') + ylab('network-based distance')
 
 ## Extract the missed connections
-# missed_df = dist_df %>% filter(missed.connection)
-# 
-# who_is = function (sid) {
-# 	sid = as.character(sid)
-# 	mdf[which(mdf$sid == sid), c('sid', 'given', 'surname', 'country')]
-# }
-# 
-# var1_df = lapply(missed_df[['Var1']], who_is) %>% do.call(rbind, .)
-# names(var1_df) = c('Var1', 'given.1', 'surname.1', 'country.1')
-# 
-# var2_df = lapply(missed_df[['Var2']], who_is) %>% do.call(rbind, .)
-# names(var2_df) = c('Var2', 'given.2', 'surname.2', 'country.2')
-# 
-# missed_df = left_join(missed_df, cbind(var1_df, var2_df))
-# rm(who_is, var1_df, var2_df)
+missed_df = dist_df %>% filter(missed.connection)
+
+who_is = function (sid) {
+	sid = as.character(sid)
+	mdf[which(mdf$sid == sid), c('sid', 'given', 'surname', 'country')]
+}
+
+var1_df = lapply(missed_df[['Var1']], who_is) %>% do.call(rbind, .)
+names(var1_df) = c('Var1', 'given.1', 'surname.1', 'country.1')
+
+var2_df = lapply(missed_df[['Var2']], who_is) %>% do.call(rbind, .)
+names(var2_df) = c('Var2', 'given.2', 'surname.2', 'country.2')
+
+missed_df = left_join(missed_df, cbind(var1_df, var2_df))
+rm(who_is, var1_df, var2_df)
+
+ggplot(data = {missed_df %>% group_by(country.1, country.2) %>% 
+				summarize(n = n()) %>% na.omit()},
+	   aes(country.1, reorder(country.2, desc(country.2)), fill = n)) +
+	geom_tile() + scale_fill_gradient(low = 'yellow', high = 'red') + 
+	stat_function(fun = function(x) (41 - x)) +
+	xlab('') + ylab('') +
+	theme(axis.text.x = element_text(hjust = 1, angle = 30, size = 6), 
+		  axis.text.y = element_text(size = 6))
 ```
