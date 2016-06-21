@@ -1,5 +1,5 @@
 ---
-title: "(papertitle)"
+title: "Utilizing Bibliometrics for Interdisciplinary Team Building: Hacking Water Management in the Western Balkans"
 author: "Maryann Cairns, Daniel J. Hicks"
 subtitle: S1 Reproducible Analysis
 output: html_document
