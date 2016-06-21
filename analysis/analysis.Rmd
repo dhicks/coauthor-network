@@ -319,10 +319,14 @@ layout_country = layout_in_circle(country_net,
 ## Uncomment the next line and last line to save to file
 #png(filename = 'country_net.png', width = 2000, height = 2000)
 plot(country_net, layout = layout_country, 
-	 vertex.size = .1*V(country_net)$n_loops, 
-	 vertex.label.color = communities$membership,
+	 vertex.size = 5 + .05*V(country_net)$n_loops, 
+	 #vertex.label.color = communities$membership,
+	 vertex.label.color = 'black',
 	 vertex.label.cex = .4,
-	 vertex.color = 'grey60', 
+	 #vertex.color = 'grey60', 
+	 vertex.color = communities$membership,
+	 vertex.frame.color = NA,
+	 #vertex.shape = V(country_net)$name %in% western_balkans,
 	 edge.curved = TRUE,
 	 edge.color = 'grey60',
 	 edge.width = .1*E(country_net)$weight, 
@@ -334,36 +338,15 @@ plot(country_net, layout = layout_country,
 
 # Areas or Keywords #
 
-This section analyzes the areas or keywords information.  We first use cluster analysis, based on which areas tend to have the same individual researchers.  
+This section analyzes the areas or keywords information.  We first identify the 15, 30, and 45 most common areas in the dataset, and determine what percentage of researchers are covered by these sets of common areas.  
 
-```{r areas_cluster}
+```{r areas_coverage}
 ## Extract the list of areas
 areas = mdf %>% select(-(id:docs)) %>% names
 
 ## Number of areas
 length(areas)
 
-## Function to collapse a list of areas and replace dots with spaces
-areas_to_string = function (areas) {
-	areas %>% paste(collapse = '; ') %>% 
-		gsub('\\.\\.', '\\.', .) %>% gsub('\\.', ' ', .)
-}
-
-## Cluster analysis
-areas_data = mdf %>% select(one_of(areas))
-areas_dist = dist(t(areas_data*1), method = 'binary')
-areas_hclust = hclust(areas_dist)
-areas_clusters = cutree(areas_hclust, k = 40)
-areas_df = data.frame(area = areas, cluster = areas_clusters)
-areas_df %>% group_by(cluster) %>% 
-	summarize(n_areas = n(), 
-			  areas = areas_to_string(area)) %>%
-	kable
-```
-
-Next, we identify the 15, 30, and 45 most common areas in the dataset, and determine what percentage of researchers are covered by these sets of common areas.  
-
-```{r areas_coverage}
 ## Coverage of the top 15, 30, and 45 areas
 areas_15 = mdf %>% select(one_of(areas)) %>% summarize_each('sum') %>% 
 	sort(decreasing = TRUE) %>% names %>% head(n=15)
@@ -378,6 +361,12 @@ areas_coverage = function (areas) {
 	mdf %>% select(one_of(areas)) %>% rowSums() %>% 
 		magrittr::is_greater_than(0) %>%
 		sum %>% magrittr::divide_by(nrow(mdf))
+}
+
+## Function to collapse a list of areas and replace dots with spaces
+areas_to_string = function (areas) {
+	areas %>% paste(collapse = '; ') %>% 
+		gsub('\\.\\.', '\\.', .) %>% gsub('\\.', ' ', .)
 }
 
 areas_list = list(areas_15 = areas_15, areas_30 = areas_30, areas_45 = areas_45)
@@ -397,13 +386,74 @@ areas_15_wb = mdf %>% filter(country %in% western_balkans) %>%
 areas_15_wb
 ```
 
+We can also use cluster analysis, based on which areas tend to have the same individual researchers.  
+
+```{r areas_cluster, eval=TRUE}
+## Cluster analysis
+areas_data = mdf %>% select(one_of(areas_45))
+areas_dendro = dist(t(areas_data*1), method = 'binary') %>%
+	hclust %>% as.dendrogram %>%
+	color_branches(h = .8) %>%
+	color_labels(h = .8) %>%
+	set('labels_cex', .5)
+#ggplot(as.ggdend(areas_dendro), horiz = TRUE) + scale_y_reverse(limits = c(1, -.5))
+
+
+areas_data = mdf %>% select(one_of('id', areas_45)) %>% 
+				melt(id.vars = 'id', variable.name = 'area') %>%
+				filter(value) %>% 
+				mutate(cluster = cutree(areas_dendro, h = .8)[area], 
+					   area = reorder(area, cluster)) %>%
+				mutate(area = gsub('\\.', ' ', area))
+
+ggplot(data = areas_data, 
+	   aes(id, reorder(area, cluster), fill = as.factor(value * cluster))) + 
+	geom_tile() +
+	scale_x_discrete(breaks = NULL, name = '') + 
+	ylab('') + 
+	scale_fill_manual(values = rep(brewer.pal(5, 'Set1'), 4), guide = FALSE)
+```
+
+
+We can construct a network of individuals and the top 45 areas, although the results are difficult to interpret.  
+
+```{r areas_network, eval=FALSE}
+areas_network = mdf %>% select(one_of('id', areas_45)) %>% 
+	melt(id.vars = 'id', variable.name = 'area') %>%
+	filter(value) %>% 
+	graph_from_data_frame(directed = FALSE)
+
+bipartite_mapping(areas_network)$res
+
+ids = mdf$id
+V(areas_network)$type = V(areas_network)$name %in% ids
+
+plot(areas_network, 
+	 #layout = layout_with_dh(areas_network), # too slow! 
+	 ## The next two create trees, but edges and node labels overlap
+	 #layout = layout_with_sugiyama(areas_network)$layout,
+	 #layout = layout_as_tree(areas_network),
+	 ## The next three cluster the areas nodes in the middle
+	 #layout = layout_with_fr(areas_network),
+	 #layout = layout_with_graphopt(areas_network),
+	 layout = layout_with_kk(areas_network),
+	 vertex.label = ifelse(V(areas_network)$type,
+	 					  '',
+	 					  V(areas_network)$name),
+	 vertex.label.cex = .5,
+	 vertex.label.color = 'black',
+	 vertex.size = 10 * (1 - V(areas_network)$type), 
+	 vertex.color = V(areas_network)$type,
+	 edge.width = .1)
+```
+
 Next we use heatmaps to compare countries and areas.  
 
 ```{r countries_areas_heatmaps}
 ## Country x areas
 country_areas = mdf %>% group_by(country) %>% select(one_of(areas)) %>% 
 	summarize_each('sum') %>% 
-	reshape2::melt(id.vars = 'country') %>% 
+	melt(id.vars = 'country') %>% 
 	filter(value != 0)
 
 ## Heatmap: all countries and areas
