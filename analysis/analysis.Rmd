@@ -286,51 +286,70 @@ country_edgelist = as.data.frame(country_edgelist)
 country_net = graph_from_data_frame(country_edgelist, directed = FALSE)
 
 E(country_net)$weight = 1
-country_net = simplify(country_net, edge.attr.comb=list(weight="sum"))
+country_net = simplify(country_net, edge.attr.comb=list(weight="sum"), 
+					   remove.loops = FALSE)
 #is_simple(country_net)
 
-## Simplify puts the weights into edges, but we want loop weights in vertices
-## So we calculate them manually
-n_loops = country_edgelist %>%
-	mutate(V1 = as.character(V1), V2 = as.character(V2)) %>%
-	filter(V1 == V2) %>% group_by(V1) %>% summarize(n = n())
-## Interpolate vertices without loops
-n_loops = left_join(data.frame(V1 = V(country_net)$name), n_loops)
-## Match to the order of country_net
-n_loops = n_loops[match(V(country_net)$name, n_loops$V1),]
-## Replace NAs with 0s
-n_loops[is.na(n_loops)] = 0
-## Write into the graph
-V(country_net)$n_loops = n_loops$n
-#as_data_frame(country_net, what = 'vertices')
+# 
+# ## Simplify puts the weights into edges, but we want loop weights in vertices
+# ## So we calculate them manually
+# n_loops = country_edgelist %>%
+# 	mutate(V1 = as.character(V1), V2 = as.character(V2)) %>%
+# 	filter(V1 == V2) %>% group_by(V1) %>% summarize(n = n())
+# ## Interpolate vertices without loops
+# n_loops = left_join(data.frame(V1 = V(country_net)$name), n_loops)
+# ## Match to the order of country_net
+# n_loops = n_loops[match(V(country_net)$name, n_loops$V1),]
+# ## Replace NAs with 0s
+# n_loops[is.na(n_loops)] = 0
+# ## Write into the graph
+# V(country_net)$n_loops = n_loops$n
+# #as_data_frame(country_net, what = 'vertices')
 
 ## Divide into clusters and write into graph
 communities = cluster_walktrap(country_net)
-communities(communities)
-V(country_net)$cluster = membership(communities)
+plot(as.dendrogram(communities), horiz = TRUE)
+## Divide into clusters using a manual cut, rather than an optimizing one
+#communities(communities)
+V(country_net)$cluster = #membership(communities)
+	cut_at(communities, steps = 40)
 
 ## Uncomment to save
 #write_graph(country_net, 'country_net.graphml', format = 'graphml')
 
-## Arrange in a circle and plot
+## Arrange in a circle
 layout_country = layout_in_circle(country_net, 
 								  #order = order(V(country_net)$name))
-								  order = order(membership(communities)))
+								  #order = order(membership(communities))
+								  order = order(V(country_net)$cluster))
+## Write layout into graph
+V(country_net)$x = layout_country[,1]
+V(country_net)$y = layout_country[,2]
+
 ## Uncomment the next line and last line to save to file
 #png(filename = 'country_net.png', width = 2000, height = 2000)
-plot(country_net, layout = layout_country, 
-	 vertex.size = 5 + .05*V(country_net)$n_loops, 
+plot(country_net, #layout = layout_country, 
+	 vertex.size = 4 * log(1 + sapply(V(country_net)$name, 
+	 								 function (x) sum(mdf$country == x, 
+	 								 				 na.rm = TRUE))),
+	 vertex.label.dist = .25,
+	 vertex.label.degree = suppressWarnings(
+		 c(1,-1) * atan2(V(country_net)$y, V(country_net)$x)),
 	 #vertex.label.color = communities$membership,
 	 vertex.label.color = 'black',
-	 vertex.label.cex = .4,
+	 vertex.label.cex = .6,
 	 #vertex.color = 'grey60', 
-	 vertex.color = communities$membership,
-	 vertex.frame.color = NA,
-	 #vertex.shape = V(country_net)$name %in% western_balkans,
+	 vertex.color = V(country_net)$cluster,
+	 vertex.frame.color = ifelse(V(country_net)$name %in% western_balkans,
+	 					  'black', NA),
+	 vertex.shape = ifelse(V(country_net)$name %in% western_balkans,
+	 					  'csquare', 'circle'),
 	 edge.curved = TRUE,
 	 edge.color = 'grey60',
-	 edge.width = .1*E(country_net)$weight, 
-	 palette = RColorBrewer::brewer.pal(length(communities), 'Set1'))
+	 edge.width = .1 * E(country_net)$weight, 
+	 edge.loop.angle = -atan2(head_of(country_net, E(country_net))$y,
+	 						  head_of(country_net, E(country_net))$x),
+	 palette = brewer.pal(7, 'Set1'))
 #dev.off()
 ```
 
