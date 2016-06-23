@@ -409,7 +409,7 @@ areas_15_wb
 
 We can also use cluster analysis, based on which areas tend to have the same individual researchers.  
 
-```{r areas_cluster, eval=TRUE}
+```{r areas_cluster}
 ## Cluster analysis
 areas_data = mdf %>% select(one_of(areas_45))
 areas_dendro = dist(t(areas_data*1), method = 'binary') %>%
@@ -432,7 +432,8 @@ ggplot(data = areas_data,
 	geom_tile() +
 	scale_x_discrete(breaks = NULL, name = '') + 
 	ylab('') + 
-	scale_fill_manual(values = rep(brewer.pal(5, 'Set1'), 4), guide = FALSE)
+	scale_fill_manual(values = rep(brewer.pal(5, 'Set1'), 4), guide = FALSE) +
+	theme(axis.text.y = element_text(size = 8))
 ```
 
 
