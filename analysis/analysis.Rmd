@@ -239,26 +239,31 @@ country_stats_plot_1 = ggplot(data = {mdf %>%
 	coord_flip() + 
 	theme(axis.text.y = element_text(size = 6))
 country_stats_plot_1
+			
 
 ## Relationship between number of authors and median centrality
 country_stats_plot_2 = ggplot(data = filter(country_df, btwn_sum > 0), 
 	   aes(btwn_median, n_authors)) + 
 	geom_point() +
-	geom_label_repel(aes(label = country), size = 1.5) +
 	geom_smooth(method = 'lm') +
 	guides(color = FALSE) + scale_x_log10() + scale_y_log10() +
 	ylab('no. authors') + xlab('centrality (median)')
-country_stats_plot_2
+country_stats_plot_2 +
+	geom_label_repel(aes(label = country), size = 1.5)
+summary(lm(data = filter(country_df, btwn_sum > 0, btwn_median > 0), 
+		   log(btwn_median) ~ log(n_authors)))
 
 ## Relationship between median and IQR centrality
 country_stats_plot_3 = ggplot(data = filter(country_df, btwn_sum > 0), 
 	   aes(btwn_median, btwn_IQR)) +
 	geom_point() +
-	geom_label_repel(aes(label = country), size = 1.5) +
 	geom_smooth(method = 'lm') +
 	guides(color = FALSE) + scale_x_log10() + scale_y_log10() +
 	ylab('centrality (IQR)') + xlab('centrality (median)')
-country_stats_plot_3
+country_stats_plot_3 +
+	geom_label_repel(aes(label = country), size = 1.5)
+summary(lm(data = filter(country_df, btwn_sum > 0, btwn_median > 0, btwn_IQR > 0), 
+		   log(btwn_median) ~ log(btwn_IQR)))
 ```
 ```{r country_stats_comb_plot, fig.height = 7, fig.width = 7}
 ## Combine the last three plots
