@@ -65,7 +65,7 @@ This section plots the coauthor network.
 
 ```{r plot_net, dpi=600}
 ## Load a layout developed in Gephi
-layout_file = paste(data_folder, 'layout.yh.graphml', sep = '')
+layout_file = paste(data_folder, 'layout.yh.san.graphml', sep = '')
 graph_layout = read_graph(layout_file, format = 'graphml')
 ## Copy into the graph
 V(graph)$x = V(graph_layout)$x
