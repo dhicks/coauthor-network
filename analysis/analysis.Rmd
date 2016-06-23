@@ -232,7 +232,7 @@ country_stats_plot_1 = ggplot(data = {mdf %>%
 	geom_point(aes(color = country), 
 	   position = 'jitter') + 
 	#stat_summary(fun.y = 'median', geom = 'line') +
-	geom_point(aes(y = median_btwn, color = country), shape = 'X', size = 3) +
+	geom_point(aes(y = median_btwn), shape = 'X', size = 3, color = 'black') +
 	guides(color = FALSE, fill = FALSE) +
 	ylab('centrality') + scale_y_log10() +
 	xlab('') +
