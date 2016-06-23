@@ -274,7 +274,7 @@ plot_grid(country_stats_plot_1,
 
 This section plots the country-level network.  
 
-```{r country_net, dpi = 600}
+```{r country_net, dpi = 600, fig.height = 9, fig.width = 9}
 ## Extract the edgelist from the coauthor net, 
 ##  convert the labels into countries, 
 ##  and turn into a graph
@@ -349,7 +349,9 @@ plot(country_net, #layout = layout_country,
 	 edge.width = .1 * E(country_net)$weight, 
 	 edge.loop.angle = -atan2(head_of(country_net, E(country_net))$y,
 	 						  head_of(country_net, E(country_net))$x),
-	 palette = brewer.pal(7, 'Set1'))
+	 palette = brewer.pal(7, 'Set1'), 
+	 margin = 1)
+#box()
 #dev.off()
 ```
 
