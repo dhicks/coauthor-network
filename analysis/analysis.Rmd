@@ -412,7 +412,28 @@ areas_15_wb = mdf %>% filter(country %in% western_balkans) %>%
 areas_15_wb
 ```
 
-We can also use cluster analysis, based on which areas tend to have the same individual researchers.  
+We can also use cluster analysis, treating similar areas of interest or similar individual researchers as a measure of "distance" between researchers and areas, respectively.  For individuals, we can calculate distances using either the top-15 or top-45 areas.  The following plots show the cumulative distribution of these distances across coauthor pairs.  Both plots can be closely approximated by uniform distributions.  
+
+```{r areas_distances}
+edge_dist_45 = apply(as_edgelist(graph), 1, 
+					 function (x) (dist(mdf[x, areas_45], method = 'binary')[1]))
+edge_dist_15 = apply(as_edgelist(graph), 1, 
+					 function (x) (dist(mdf[x, areas_15], method = 'binary')[1]))
+
+edge_dist_45_plot = ggplot(data.frame(x = edge_dist_45), aes(x)) + stat_ecdf() + 
+	geom_segment(aes(x = 0.25, y = 0, xend = 1, yend = 1), color = 'red') +
+	labs(x = '45-area distance', y = 'cumulative frequency')
+	
+edge_dist_15_plot = ggplot(data.frame(x = edge_dist_15), aes(x)) + stat_ecdf() + 
+	geom_segment(aes(x = 0, y = 0, xend = 1, yend = 1), color = 'red') +
+	labs(x = '15-area distance', y = 'cumulative frequency')
+
+plot_grid(edge_dist_15_plot, edge_dist_45_plot, labels = 'AUTO')
+```	
+
+Specifically, using the 15-area distance, collaborations between researchers with substantially different interests (e.g., near .75, `r target = .75; ecdf(edge_dist_15)(target + .01) - ecdf(edge_dist_15)(target - .01) * 100`%) are only slightly more frequent than collaborations between researchers with fairly similar interests (e.g., near .25, `r target = .25; ecdf(edge_dist_15)(target + .01) - ecdf(edge_dist_15)(target - .01)`).  
+
+For areas, we identify clusters among the top 45 areas, based on similarities in the distribution of individual researchers.  
 
 ```{r areas_cluster}
 ## Cluster analysis
@@ -445,7 +466,7 @@ ggplot(data = areas_data,
 We can construct a network of individuals and the top 45 areas, although the results are difficult to interpret.  
 
 ```{r areas_network, eval=FALSE}
-areas_network = mdf %>% select(one_of('id', areas_45)) %>% 
+areas_network = mdf %>% select(one_of('id', areas_30)) %>% 
 	melt(id.vars = 'id', variable.name = 'area') %>%
 	filter(value) %>% 
 	graph_from_data_frame(directed = FALSE)
@@ -527,7 +548,7 @@ ggplot(data = {country_areas %>% filter(country %in% western_balkans,
 ```{r missed_connections, eval=TRUE}
 ## Calculate distance based on areas
 areas = mdf %>% select(-(id:docs)) %>% names
-areas_based_dist = dist({mdf %>% select(one_of(areas))}, method = 'binary') %>%
+areas_based_dist = dist({mdf %>% select(one_of(areas_45))}, method = 'binary') %>%
 	as.matrix()
 dimnames(areas_based_dist) = list(mdf$sid, mdf$sid)
 ## Melt into dataframe
@@ -582,7 +603,7 @@ ggplot(data = {missed_df %>% group_by(country.1, country.2) %>%
 				summarize(n = n()) %>% na.omit()},
 	   aes(country.1, reorder(country.2, desc(country.2)), fill = n)) +
 	geom_tile() + scale_fill_gradient(low = 'yellow', high = 'red') + 
-	stat_function(fun = function(x) (41 - x)) +
+	stat_function(fun = function(x) (34 - x)) +
 	xlab('') + ylab('') +
 	theme(axis.text.x = element_text(hjust = 1, angle = 30, size = 6), 
 		  axis.text.y = element_text(size = 6))
