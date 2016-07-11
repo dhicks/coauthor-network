@@ -22,7 +22,9 @@ source('load_data.R')
 opts_chunk$set(fig.path = 'figure/', 
 				   dev = 'png', dpi = 300, 
 				   message = FALSE, warning = FALSE)
+options(digits=2)
 
+library(broom)
 library(cowplot)
 library(dendextend)
 library(ggrepel)
@@ -198,7 +200,9 @@ geom_scatter_smooth = function(data, mapping, method = 'lm', ...) {
 }
 ggpairs(country_df, columns = c('n_authors', 'btwn_log_median',
 								'hdi', 'gdp'), 
-		lower = list(continuous = wrap(geom_scatter_smooth, method = 'lm')))
+		lower = list(continuous = wrap(geom_scatter_smooth, method = 'lm'))) +
+	theme(axis.text = element_text(size = 4), 
+		  axis.title = element_text(size = 6))
 
 ## Countries, by descending count of authors
 country_df %>% select(country, n_authors, btwn_median) %>% arrange(desc(n_authors)) %>% kable
@@ -392,7 +396,7 @@ plot(country_net, #layout = layout_country,
 	 					  'csquare', 'circle'),
 	 edge.curved = TRUE,
 	 edge.color = 'grey60',
-	 edge.width = .1 * E(country_net)$weight, 
+	 edge.width = .025 * E(country_net)$weight, 
 	 edge.loop.angle = -atan2(head_of(country_net, E(country_net))$y,
 	 						  head_of(country_net, E(country_net))$x),
 	 palette = brewer.pal(7, 'Set1'), 
@@ -587,39 +591,52 @@ ggplot(data = {country_areas %>% filter(country %in% western_balkans,
 		  axis.text.y = element_text(size = 6))
 ```
 
-Finally, we can calculate a "score" for each country, based on the number of the top 45 areas in which it has at least one researcher.  Unsurprisingly, this variable is strongly associated with the number of authors; but it does not appear to have any associations with any other variables.  
-
-*[pairs plot]*
+Finally, we can calculate a "score" for each country, based on the number of the top 45 areas in which it has at least one researcher.  This variable has a strong association with the number of authors, and is fairly well-explained by the combination of the number of authors and GDP.  
 
 ```{r areas_score}
+## Calculate an areas score and add it to country_df
 country_df = country_areas %>% filter(variable %in% areas_45) %>%
 	group_by(country) %>% summarize(areas.45.score = sum(value > 0)) %>%
 	right_join(country_df)
 
-## Areas score and no. authors
-ggplot(data = {country_areas %>% filter(variable %in% areas_45) %>%
-		group_by(country) %>% summarize(areas.45.score = sum(value > 0)) %>%
-		right_join(country_df)}, 
-	aes(n_authors, areas.45.score)) + 
-	geom_point() + 
-	geom_smooth(method = 'lm') +
-	scale_x_log10()
+ggpairs(country_df, columns = c('n_authors', 'btwn_log_median',
+								'areas.45.score',
+								'hdi', 'gdp'), 
+		lower = list(continuous = wrap(geom_scatter_smooth, method = 'lm'))) +
+	theme(axis.text = element_text(size = 4), 
+		  axis.title = element_text(size = 6))
+areas_auth_gdp_fit = lm(data = country_df, areas.45.score ~ n_authors + I(gdp/1000))
+kable({tidy(areas_auth_gdp_fit) %>% 
+		mutate(ci.low = estimate - qnorm(.975)*std.error, 
+			   ci.high = estimate + qnorm(.975)*std.error)}, 
+	  caption = paste('Linear regression of top 45 areas score against GDP and number of authors. ', 
+	  	'(R^2 = ', glance(areas_auth_gdp_fit)$r.squared, 
+	  	')', sep = ''))
 
-## Areas score and median betweenness
-ggplot(data = {country_areas %>% filter(variable %in% areas_45) %>%
-		group_by(country) %>% summarize(areas.45.score = sum(value > 0)) %>%
-		right_join(country_df)}, 
-	aes(areas.45.score, btwn_median)) + 
-	geom_point() + 
-	scale_y_log10()
-
-## Areas score and HDI
-ggplot(data = {country_areas %>% filter(variable %in% areas_45) %>%
-			group_by(country) %>% summarize(areas.45.score = sum(value > 0)) %>%
-			right_join(country_df)}, 
-		aes(hdi, areas.45.score)) + 
-	geom_point() + geom_smooth(method = 'lm') + 
-	scale_y_log10()
+# ## Areas score and no. authors
+# ggplot(data = {country_areas %>% filter(variable %in% areas_45) %>%
+# 		group_by(country) %>% summarize(areas.45.score = sum(value > 0)) %>%
+# 		right_join(country_df)}, 
+# 	aes(n_authors, areas.45.score)) + 
+# 	geom_point() + 
+# 	geom_smooth(method = 'lm') +
+# 	scale_x_log10()
+# 
+# ## Areas score and median betweenness
+# ggplot(data = {country_areas %>% filter(variable %in% areas_45) %>%
+# 		group_by(country) %>% summarize(areas.45.score = sum(value > 0)) %>%
+# 		right_join(country_df)}, 
+# 	aes(areas.45.score, btwn_median)) + 
+# 	geom_point() + 
+# 	scale_y_log10()
+# 
+# ## Areas score and HDI
+# ggplot(data = {country_areas %>% filter(variable %in% areas_45) %>%
+# 			group_by(country) %>% summarize(areas.45.score = sum(value > 0)) %>%
+# 			right_join(country_df)}, 
+# 		aes(hdi, areas.45.score)) + 
+# 	geom_point() + geom_smooth(method = 'lm') + 
+# 	scale_y_log10()
 ```
 
 
