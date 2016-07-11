@@ -6,7 +6,6 @@ output: html_document
 ---
 
 TODO: 
-countries vs. GDP, HDI
 turn plot_net back on
 
 This document provides fully reproducible source code for our entire analysis, including every figure presented in the main paper.  Besides an installation of R and the packages listed below, the following files are required to reproduce the analysis:  
