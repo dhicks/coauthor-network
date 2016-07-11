@@ -420,13 +420,19 @@ edge_dist_45 = apply(as_edgelist(graph), 1,
 edge_dist_15 = apply(as_edgelist(graph), 1, 
 					 function (x) (dist(mdf[x, areas_15], method = 'binary')[1]))
 
-edge_dist_45_plot = ggplot(data.frame(x = edge_dist_45), aes(x)) + stat_ecdf() + 
-	geom_segment(aes(x = 0.25, y = 0, xend = 1, yend = 1), color = 'red') +
-	labs(x = '45-area distance', y = 'cumulative frequency')
+edge_dist_45_plot = ggplot(data.frame(x = edge_dist_45), aes(x)) + 
+	geom_segment(aes(x = 0.25, y = 0, xend = 1, yend = 1), color = 'blue') +
+	stat_ecdf() + 
+	coord_flip() +
+	xlab('45-area distance') + 
+	scale_y_continuous(name = 'cumulative percentile', labels = scales::percent)
 	
-edge_dist_15_plot = ggplot(data.frame(x = edge_dist_15), aes(x)) + stat_ecdf() + 
-	geom_segment(aes(x = 0, y = 0, xend = 1, yend = 1), color = 'red') +
-	labs(x = '15-area distance', y = 'cumulative frequency')
+edge_dist_15_plot = ggplot(data.frame(x = edge_dist_15), aes(x)) + 
+	geom_segment(aes(x = 0, y = 0, xend = 1, yend = 1), color = 'blue') +
+	stat_ecdf() + 
+	coord_flip() +
+	labs(x = '15-area distance', y = 'cumulative quantile') +
+	scale_y_continuous(name = 'cumulative percentile', labels = scales::percent)
 
 plot_grid(edge_dist_15_plot, edge_dist_45_plot, labels = 'AUTO')
 ```	
