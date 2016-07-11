@@ -6,7 +6,7 @@ output: html_document
 ---
 
 TODO: 
-strip down layout.graphml
+countries vs. GDP, HDI
 turn plot_net back on
 
 This document provides fully reproducible source code for our entire analysis, including every figure presented in the main paper.  Besides an installation of R and the packages listed below, the following files are required to reproduce the analysis:  
@@ -27,6 +27,7 @@ opts_chunk$set(fig.path = 'figure/',
 library(cowplot)
 library(dendextend)
 library(ggrepel)
+library(GGally)
 library(knitr)
 library(mgcv)
 library(RColorBrewer)
@@ -130,7 +131,7 @@ deg_btwn_plot = ggplot(data = mdf, aes(x = btwn, y = deg)) +
 	scale_y_log10(name = 'degree') + 
 	scale_x_log10(name = 'centrality')
 deg_btwn_plot
-summary(lm(data = filter(mdf, btwn > 0), log(btwn) ~ log(deg)))
+summary(lm(data = filter(mdf, btwn > 0), log10(btwn) ~ log10(deg)))
 
 ## Number of documents and betweenness centrality
 docs_btwn_plot = ggplot(data = mdf, aes(x = btwn, y = docs)) +
@@ -138,7 +139,7 @@ docs_btwn_plot = ggplot(data = mdf, aes(x = btwn, y = docs)) +
 	scale_y_log10(name = 'publications') +
 	scale_x_log10(name = 'centrality')
 docs_btwn_plot
-summary(lm(data = filter(mdf, btwn > 0, docs > 0), log(btwn) ~ log(docs)))
+summary(lm(data = filter(mdf, btwn > 0, docs > 0), log10(btwn) ~ log10(docs)))
 
 plot_grid(deg_btwn_plot, docs_btwn_plot, ncol = 1, labels = 'AUTO') 
 ```
@@ -152,11 +153,53 @@ This section calculates various country-level statistics, then generates tables 
 ```{r country_stats}
 ## Country-level stats
 country_df = mdf %>% group_by(country) %>% 
-	summarize_each_(vars = c('deg', 'btwn', 'docs'), funs(sum, mean, max, median, sd, IQR))
+	mutate(btwn_log = log10(btwn)) %>%
+	summarize_each_(vars = c('deg', 'btwn', 'btwn_log', 'docs'), 
+					funs(sum, mean, max, median, sd, IQR))
+country_df[country_df == -Inf|country_df == Inf] = NA
 country_df = mdf %>% group_by(country) %>% summarize(n_authors = n()) %>% left_join(country_df)
 
+## HDI data
+## http://hdr.undp.org/en/data#
+hdi_df = read.csv('Human Development Index (HDI).csv', skip = 1)
+hdi_df$hdi = hdi_df %>% select(X1980:X2010) %>% rowMeans(na.rm = TRUE)
+hdi_df = hdi_df %>% transmute(country = gsub('^\\s', '', Country), 
+					 hdi = hdi)
+country_df = left_join(country_df, hdi_df)
+
+## GDP data
+## http://databank.worldbank.org/data/reports.aspx?source=2&series=NY.GDP.MKTP.CD&country=
+gdp_df = read.csv('Data_Extract_From_World_Development_Indicators/e21b37e3-d24e-4a17-bc1c-0a13efb9929c_Data.csv')
+
+gdp_df =  select(gdp_df, Country.Name, X1991..YR1991.:X2015..YR2015.)
+names(gdp_df) = c('country', paste('yr', 1991:2015, sep = ''))
+gdp_countries = gdp_df$country
+## Manually fix a few country names
+gdp_countries = gsub('Iran, Islamic Rep.', 'Iran', gdp_countries)
+gdp_countries = gsub('Macedonia, FYR', 'Macedonia', gdp_countries)
+gdp_countries = gsub('Slovak Republic', 'Slovakia', gdp_countries)
+gdp_countries = gsub('Korea, Rep.', 'South Korea', gdp_countries)
+
+parse = function(x) {as.numeric(as.character(x))}
+gdp = gdp_df %>% select(yr1991:yr2015) %>% mutate_each(funs(parse)) %>%
+	rowMeans(na.rm = TRUE)
+country_df = data.frame(country = gdp_countries, gdp = gdp) %>% 
+	right_join(country_df)
+```
+```{r country_stats_plots}
 ## How many countries?
 nrow(country_df)
+
+## Pairs plot
+geom_scatter_smooth = function(data, mapping, method = 'lm', ...) {
+	p = ggplot(data = data, mapping = mapping) +
+		geom_point() +
+		geom_smooth(method = method, ...)
+	p
+}
+ggpairs(country_df, columns = c('n_authors', 'btwn_log_median',
+								'hdi', 'gdp'), 
+		lower = list(continuous = wrap(geom_scatter_smooth, method = 'lm')))
 
 ## Countries, by descending count of authors
 country_df %>% select(country, n_authors, btwn_median) %>% arrange(desc(n_authors)) %>% kable
@@ -272,7 +315,6 @@ plot_grid(country_stats_plot_1,
 		  		  labels = c('B', 'C'), align = 'hv'),
 		  labels = c('A', ''), ncol = 1, rel_heights = c(1, 1))
 ```
-
 
 
 # Country-Level Network #
@@ -544,6 +586,41 @@ ggplot(data = {country_areas %>% filter(country %in% western_balkans,
 	xlab('') + ylab('') +
 	theme(axis.text.x = element_text(hjust = 1, angle = 20), 
 		  axis.text.y = element_text(size = 6))
+```
+
+Finally, we can calculate a "score" for each country, based on the number of the top 45 areas in which it has at least one researcher.  Unsurprisingly, this variable is strongly associated with the number of authors; but it does not appear to have any associations with any other variables.  
+
+*[pairs plot]*
+
+```{r areas_score}
+country_df = country_areas %>% filter(variable %in% areas_45) %>%
+	group_by(country) %>% summarize(areas.45.score = sum(value > 0)) %>%
+	right_join(country_df)
+
+## Areas score and no. authors
+ggplot(data = {country_areas %>% filter(variable %in% areas_45) %>%
+		group_by(country) %>% summarize(areas.45.score = sum(value > 0)) %>%
+		right_join(country_df)}, 
+	aes(n_authors, areas.45.score)) + 
+	geom_point() + 
+	geom_smooth(method = 'lm') +
+	scale_x_log10()
+
+## Areas score and median betweenness
+ggplot(data = {country_areas %>% filter(variable %in% areas_45) %>%
+		group_by(country) %>% summarize(areas.45.score = sum(value > 0)) %>%
+		right_join(country_df)}, 
+	aes(areas.45.score, btwn_median)) + 
+	geom_point() + 
+	scale_y_log10()
+
+## Areas score and HDI
+ggplot(data = {country_areas %>% filter(variable %in% areas_45) %>%
+			group_by(country) %>% summarize(areas.45.score = sum(value > 0)) %>%
+			right_join(country_df)}, 
+		aes(hdi, areas.45.score)) + 
+	geom_point() + geom_smooth(method = 'lm') + 
+	scale_y_log10()
 ```
 
 
