@@ -1,8 +1,7 @@
 ---
-title: "Utilizing Bibliometrics for Interdisciplinary Team Building: Hacking Water Management in the Western Balkans"
+title: 'Utilizing Bibliometrics for Interdisciplinary Team Building: Hacking Water Management in the Western Balkans'
 author: "Maryann Cairns, Daniel J. Hicks"
 subtitle: S1 Reproducible Analysis
-output: html_document
 ---
 
 TODO: 
@@ -22,7 +21,7 @@ source('load_data.R')
 opts_chunk$set(fig.path = 'figure/', 
 				   dev = 'png', dpi = 300, 
 				   message = FALSE, warning = FALSE)
-options(digits=2)
+options(digits=4)
 
 library(broom)
 library(cowplot)
@@ -605,13 +604,27 @@ ggpairs(country_df, columns = c('n_authors', 'btwn_log_median',
 		lower = list(continuous = wrap(geom_scatter_smooth, method = 'lm'))) +
 	theme(axis.text = element_text(size = 4), 
 		  axis.title = element_text(size = 6))
-areas_auth_gdp_fit = lm(data = country_df, areas.45.score ~ n_authors + I(gdp/1000))
+areas_auth_gdp_fit = lm(data = country_df, areas.45.score ~ log10(n_authors) + I(gdp/1000))
 kable({tidy(areas_auth_gdp_fit) %>% 
 		mutate(ci.low = estimate - qnorm(.975)*std.error, 
 			   ci.high = estimate + qnorm(.975)*std.error)}, 
 	  caption = paste('Linear regression of top 45 areas score against GDP and number of authors. ', 
 	  	'(R^2 = ', glance(areas_auth_gdp_fit)$r.squared, 
 	  	')', sep = ''))
+
+ggplot(country_df, aes(n_authors, areas.45.score, color = gdp/1000)) + 
+	geom_point() + 
+	geom_smooth(method = 'lm', color = 'black', formula = y~log10(x)) +
+	xlab('no. authors') +
+#	scale_x_log10(name = 'no. authors') + 
+	ylab('coverage of top 45 areas') + ylim(0, 55) +
+	scale_color_gradient(low = 'blue', high = 'red', 
+						 name = 'GDP per cap.\n(1k USD)', 
+						 breaks = seq(10, 70, by = 20)) +
+	# theme(legend.position = 'bottom')
+	theme(legend.position = c(.5, .25), legend.direction = 'horizontal', 
+		  legend.text = element_text(size = 8),
+		  legend.title = element_text(size = 8))
 
 # ## Areas score and no. authors
 # ggplot(data = {country_areas %>% filter(variable %in% areas_45) %>%
