@@ -1,11 +1,10 @@
 ---
-title: 'Utilizing Bibliometrics for Interdisciplinary Team Building: Hacking Water Management in the Western Balkans'
+title: 'Utilizing Bibliometrics for Interdisciplinary Team Building: Hacking Water
+  Management in the Western Balkans'
 author: "Maryann Cairns, Daniel J. Hicks"
 subtitle: S1 Reproducible Analysis
+output: pdf_document
 ---
-
-TODO: 
-turn plot_net back on
 
 This document provides fully reproducible source code for our entire analysis, including every figure presented in the main paper.  Besides an installation of R and the packages listed below, the following files are required to reproduce the analysis:  
 
@@ -14,13 +13,21 @@ This document provides fully reproducible source code for our entire analysis, i
 - `load_data.R`: source code to load the dataset
 - `layout.graphml`: the layout for plotting the coauthor network
 
-```{r setup, cache = FALSE, echo = FALSE, message=FALSE, warning=FALSE}
+```{r setup, cache = FALSE, echo = TRUE, message=FALSE, warning=FALSE}
 data_folder = '../2016-06-06/'
 source('load_data.R')
 
 opts_chunk$set(fig.path = 'figure/', 
-				   dev = 'png', dpi = 300, 
-				   message = FALSE, warning = FALSE)
+			   fig.align = 'center',
+			   fig.width = 6,
+			   fig.height = 6,
+			   out.width = '3in',
+			   out.height = '3in',
+			   dev = 'png',
+			   dpi = 300,
+			   cache = TRUE,
+			   message = FALSE, 
+			   warning = FALSE)
 options(digits=4)
 
 library(broom)
@@ -32,6 +39,7 @@ library(knitr)
 library(mgcv)
 library(RColorBrewer)
 library(reshape2)
+library(xtable)
 
 sessionInfo()
 ```
@@ -42,21 +50,29 @@ sessionInfo()
 Since the sections below restrict the graph to the giant component, here we compare countries to distinct disconnected components of the graph.  
 
 ```{r country_component}
-country_comp_df = mdf %>% group_by(country, component) %>% summarize(n = n())
+country_comp_df = mdf %>% 
+	group_by(country, component) %>% 
+	summarize(n = n())
 
-ggplot(data = country_comp_df, aes(x = component, y = country, fill = n)) + 
-	geom_tile() + 
-	scale_fill_gradient(low = 'yellow', high = 'red') +
-	scale_x_continuous(breaks = seq(1, max(country_comp_df$component), by = 2)) +
-	theme(axis.text.y = element_text(size = 3))
-
-western_balkans = c('Albania', 'Serbia', 'Montenegro', 'Macedonia', 'Kosovo', 'Bosnia and Herzegovina')
-
-ggplot(data = filter(country_comp_df, country %in% western_balkans), 
+ggplot(data = country_comp_df, 
 	   aes(x = component, y = country, fill = n)) + 
 	geom_tile() + 
 	scale_fill_gradient(low = 'yellow', high = 'red') +
-	scale_x_continuous(breaks = seq(1, max(country_comp_df$component), by = 2))
+	scale_x_continuous(breaks = seq(1, max(country_comp_df$component),
+									by = 2)) +
+	theme(axis.text.y = element_text(size = 3))
+
+western_balkans = c('Albania', 'Serbia', 'Montenegro', 
+					'Macedonia', 'Kosovo', 
+					'Bosnia and Herzegovina')
+
+ggplot(data = filter(country_comp_df, 
+					 country %in% western_balkans), 
+	   aes(x = component, y = country, fill = n)) + 
+	geom_tile() + 
+	scale_fill_gradient(low = 'yellow', high = 'red') +
+	scale_x_continuous(breaks = seq(1, max(country_comp_df$component),
+									by = 2))
 ```
 
 
@@ -64,7 +80,7 @@ ggplot(data = filter(country_comp_df, country %in% western_balkans),
 
 This section plots the coauthor network.  
 
-```{r plot_net, dpi=600}
+```{r plot_net, dpi = 900}
 ## Load a layout developed in Gephi
 layout_file = paste(data_folder, 'layout.yh.san.graphml', sep = '')
 graph_layout = read_graph(layout_file, format = 'graphml')
@@ -76,12 +92,20 @@ rm(graph_layout)
 
 ## ----------
 ## Restrict to giant component
-mdf = mdf %>% filter(component == 1) %>% droplevels
+mdf = mdf %>% 
+	filter(component == 1) %>% 
+	droplevels()
 graph = induced_subgraph(graph, components(graph)$membership == 1)
 ## Identify and remove areas with 0 individuals in the giant component
-drop_areas = mdf %>% select(-(id:docs)) %>% summarize_each(funs(sum)) %>%
-	melt() %>% filter(value == 0) %>% .[['variable']] %>% as.character
-mdf = mdf %>% select(-one_of(drop_areas))
+drop_areas = mdf %>% 
+	select(-(id:docs)) %>% 
+	summarize_each(funs(sum)) %>%
+	melt() %>% 
+	filter(value == 0) %>% 
+	.[['variable']] %>% 
+	as.character()
+mdf = mdf %>% 
+	select(-one_of(drop_areas))
 ## ----------
 
 ## Graph statistics
@@ -98,17 +122,18 @@ V(graph)$btwn = betweenness(graph, normalized = TRUE)
 #tikz(paste(data_folder, 'graph.tex', sep = ''),standAlone = TRUE)
 ## Output to high-res PNG
 #png(filename = paste(data_folder, 'graph.png', sep = ''), width = 4000, height = 4000)
-# plot(graph,
-# 	 vertex.size = 2 + 30 * V(graph)$btwn,
-# 	 #vertex.color = communities$membership,
-# 	 vertex.color = as.factor(V(graph)$country %in% western_balkans),
-# 	 vertex.frame.color = NA,
-# 	 #vertex.label = NA,
-# 	 vertex.label = V(graph)$country,
-# 	 #vertex.label = V(graph)$surname,
-# 	 vertex.label.cex = (.1 + 1 * V(graph)$btwn),
-# 	 vertex.label.color = 'black',
-# 	 edge.width = .5, edge.curved = FALSE)
+par(oma = c(0, 0, 0, 0))
+plot(graph, frame = TRUE, 
+	 vertex.size = 2 + 30 * V(graph)$btwn,
+	 #vertex.color = communities$membership,
+	 vertex.color = as.factor(V(graph)$country %in% western_balkans),
+	 vertex.frame.color = NA,
+	 #vertex.label = NA,
+	 vertex.label = V(graph)$country,
+	 #vertex.label = V(graph)$surname,
+	 vertex.label.cex = (.1 + 1 * V(graph)$btwn),
+	 vertex.label.color = 'black',
+	 edge.width = .5, edge.curved = FALSE)
 #dev.off()
 ```
 
@@ -123,11 +148,16 @@ This section generates tables and plots for various individual-level statistics.
 nrow(mdf)
 
 ## Top 10 researchers by betweenness centrality
-mdf %>% select(surname, given, affiliation, country, deg, docs, btwn) %>% arrange(desc(btwn)) %>% head(10) %>% kable
+mdf %>% 
+	select(surname, given, affiliation, country, deg, docs, btwn) %>%
+	arrange(desc(btwn)) %>% 
+	head(10) %>% 
+	kable()
 
 ## Degree and betweenness centrality
 deg_btwn_plot = ggplot(data = mdf, aes(x = btwn, y = deg)) +
-	geom_point() + stat_smooth(method = 'lm') +
+	geom_point() + 
+	stat_smooth(method = 'lm') +
 	scale_y_log10(name = 'degree') + 
 	scale_x_log10(name = 'centrality')
 deg_btwn_plot
@@ -157,14 +187,20 @@ country_df = mdf %>% group_by(country) %>%
 	summarize_each_(vars = c('deg', 'btwn', 'btwn_log', 'docs'), 
 					funs(sum, mean, max, median, sd, IQR))
 country_df[country_df == -Inf|country_df == Inf] = NA
-country_df = mdf %>% group_by(country) %>% summarize(n_authors = n()) %>% left_join(country_df)
+country_df = mdf %>% 
+	group_by(country) %>% 
+	summarize(n_authors = n()) %>% 
+	left_join(country_df)
 
 ## HDI data
 ## http://hdr.undp.org/en/data#
 hdi_df = read.csv('Human Development Index (HDI).csv', skip = 1)
-hdi_df$hdi = hdi_df %>% select(X1980:X2010) %>% rowMeans(na.rm = TRUE)
-hdi_df = hdi_df %>% transmute(country = gsub('^\\s', '', Country), 
-					 hdi = hdi)
+hdi_df$hdi = hdi_df %>% 
+	select(X1980:X2010) %>% 
+	rowMeans(na.rm = TRUE)
+hdi_df = hdi_df %>% 
+	transmute(country = gsub('^\\s', '', Country), 
+			  hdi = hdi)
 country_df = left_join(country_df, hdi_df)
 
 ## GDP data
@@ -181,7 +217,9 @@ gdp_countries = gsub('Slovak Republic', 'Slovakia', gdp_countries)
 gdp_countries = gsub('Korea, Rep.', 'South Korea', gdp_countries)
 
 parse = function(x) {as.numeric(as.character(x))}
-gdp = gdp_df %>% select(yr1991:yr2015) %>% mutate_each(funs(parse)) %>%
+gdp = gdp_df %>% 
+	select(yr1991:yr2015) %>% 
+	mutate_each(funs(parse)) %>%
 	rowMeans(na.rm = TRUE)
 country_df = data.frame(country = gdp_countries, gdp = gdp) %>% 
 	right_join(country_df)
@@ -199,12 +237,16 @@ geom_scatter_smooth = function(data, mapping, method = 'lm', ...) {
 }
 ggpairs(country_df, columns = c('n_authors', 'btwn_log_median',
 								'hdi', 'gdp'), 
-		lower = list(continuous = wrap(geom_scatter_smooth, method = 'lm'))) +
+		lower = list(continuous = wrap(geom_scatter_smooth, 
+									   method = 'lm'))) +
 	theme(axis.text = element_text(size = 4), 
 		  axis.title = element_text(size = 6))
 
 ## Countries, by descending count of authors
-country_df %>% select(country, n_authors, btwn_median) %>% arrange(desc(n_authors)) %>% kable
+country_df %>% 
+	select(country, n_authors, btwn_median) %>% 
+	arrange(desc(n_authors)) %>% 
+	kable()
 ## Plot of countries, by descending count of authors
 ggplot(data = country_df, aes(x = reorder(country, n_authors), y = n_authors, fill = country)) + 
 	geom_bar(stat = 'identity') +
@@ -215,7 +257,8 @@ ggplot(data = country_df, aes(x = reorder(country, n_authors), y = n_authors, fi
 
 
 ## Countries, by descending median number of papers
-country_df %>% select(country, docs_median) %>% arrange(desc(docs_median)) %>%
+country_df %>% select(country, docs_median) %>%
+	arrange(desc(docs_median)) %>%
 	kable(digits = 2)
 ## Plot
 ggplot(data = country_df, aes(x = reorder(country, docs_median), 
@@ -228,7 +271,9 @@ ggplot(data = country_df, aes(x = reorder(country, docs_median),
 
 
 ## Countries, by descending sum centrality
-country_df %>% select(country, n_authors, btwn_sum, btwn_median) %>% arrange(desc(btwn_sum)) %>% 
+country_df %>% 
+	select(country, n_authors, btwn_sum, btwn_median) %>% 
+	arrange(desc(btwn_sum)) %>% 
 	filter(btwn_sum > 0) %>%
 	kable(digits = 2)
 ggplot(data = filter(country_df, btwn_sum > max(btwn_sum)/100), 
@@ -245,7 +290,8 @@ ggplot(data = filter(country_df, btwn_sum > max(btwn_sum)/100),
 ## Countries, by descending median centrality
 country_df %>% select(country, btwn_median) %>% 
 	filter(btwn_median > 0) %>%
-	arrange(desc(btwn_median)) %>% kable
+	arrange(desc(btwn_median)) %>% 
+	kable()
 # ggplot(data = filter(country_df, btwn_median > max(btwn_median)/100), 
 # 	   aes(x = reorder(country, btwn_median), y = btwn_median)) +
 # 	geom_bar(stat = 'identity') +
@@ -253,11 +299,15 @@ country_df %>% select(country, btwn_median) %>%
 # 	ylab('median centrality') +
 # 	coord_flip()
 
-btwn_plot_countries = country_df %>% filter(btwn_median > 0) %>% .[['country']]
+btwn_plot_countries = country_df %>% 
+	filter(btwn_median > 0) %>% 
+	.[['country']]
 ## Barplot of medians, with jittered individual values
 ggplot(data = filter(country_df, country %in% btwn_plot_countries),
 					 aes(x = reorder(country, btwn_median), 
-							  y = btwn_median, color = country, fill = country)) +
+					 	y = btwn_median, 
+					 	color = country, 
+					 	fill = country)) +
 	geom_bar(stat = 'identity', width = .05) +
 	geom_point(data = filter(mdf, country %in% btwn_plot_countries), 
 			   aes(x = country, y = btwn), position = 'jitter') +
@@ -270,12 +320,14 @@ ggplot(data = filter(country_df, country %in% btwn_plot_countries),
 ##  NB scale_y_log10 applies the log before calculating the medians, 
 ##    producing errors if we try to use stat_summary, so we 
 ##    calculate medians in the data assignment
-country_stats_plot_1 = ggplot(data = {mdf %>% 
+country_stats_plot_1 = ggplot(
+		data = {mdf %>% 
 				filter(country %in% btwn_plot_countries) %>%
-				group_by(country) %>% mutate(median_btwn = median(btwn))}, 
-	   aes(x = reorder(country, btwn, FUN = median), y = btwn)) +
+				group_by(country) %>% 
+				mutate(median_btwn = median(btwn))}, 
+		aes(x = reorder(country, btwn, FUN = median), y = btwn)) +
 	geom_point(aes(color = country), 
-	   position = 'jitter') + 
+			   position = 'jitter') + 
 	#stat_summary(fun.y = 'median', geom = 'line') +
 	geom_point(aes(y = median_btwn), shape = 'X', size = 3, color = 'black') +
 	guides(color = FALSE, fill = FALSE) +
@@ -287,8 +339,9 @@ country_stats_plot_1
 			
 
 ## Relationship between number of authors and median centrality
-country_stats_plot_2 = ggplot(data = filter(country_df, btwn_sum > 0), 
-	   aes(btwn_median, n_authors)) + 
+country_stats_plot_2 = ggplot(
+		data = filter(country_df, btwn_sum > 0), 
+		aes(btwn_median, n_authors)) + 
 	geom_point() +
 	geom_smooth(method = 'lm') +
 	guides(color = FALSE) + scale_x_log10() + scale_y_log10() +
@@ -299,8 +352,9 @@ summary(lm(data = filter(country_df, btwn_sum > 0, btwn_median > 0),
 		   log(btwn_median) ~ log(n_authors)))
 
 ## Relationship between median and IQR centrality
-country_stats_plot_3 = ggplot(data = filter(country_df, btwn_sum > 0), 
-	   aes(btwn_median, btwn_IQR)) +
+country_stats_plot_3 = ggplot(
+		data = filter(country_df, btwn_sum > 0), 
+		aes(btwn_median, btwn_IQR)) +
 	geom_point() +
 	geom_smooth(method = 'lm') +
 	guides(color = FALSE) + scale_x_log10() + scale_y_log10() +
@@ -310,7 +364,7 @@ country_stats_plot_3 +
 summary(lm(data = filter(country_df, btwn_sum > 0, btwn_median > 0, btwn_IQR > 0), 
 		   log(btwn_median) ~ log(btwn_IQR)))
 ```
-```{r country_stats_comb_plot, fig.height = 7, fig.width = 7}
+```{r country_stats_comb_plot}
 ## Combine the last three plots
 plot_grid(country_stats_plot_1, 
 		  plot_grid(country_stats_plot_2, country_stats_plot_3, 
@@ -323,13 +377,16 @@ plot_grid(country_stats_plot_1,
 
 This section plots the country-level network.  
 
-```{r country_net, dpi = 600, fig.height = 9, fig.width = 9}
+```{r country_net, dpi = 900}
 ## Extract the edgelist from the coauthor net, 
 ##  convert the labels into countries, 
 ##  and turn into a graph
 country_edgelist = as_edgelist(graph) %>%
 	apply(., MARGIN = 2, 
-		  FUN = function (x) get.vertex.attribute(graph, 'country', index = x))
+	    FUN = function (x) {
+		    get.vertex.attribute(graph, 'country', index = x)
+		}
+	)
 country_edgelist[is.na(country_edgelist)] = ''
 country_edgelist = as.data.frame(country_edgelist)
 country_net = graph_from_data_frame(country_edgelist, directed = FALSE)
@@ -368,16 +425,17 @@ V(country_net)$cluster = #membership(communities)
 
 ## Arrange in a circle
 layout_country = layout_in_circle(country_net, 
-								  #order = order(V(country_net)$name))
-								  #order = order(membership(communities))
-								  order = order(V(country_net)$cluster))
+								  order =
+								  	order(V(country_net)$cluster))
 ## Write layout into graph
 V(country_net)$x = layout_country[,1]
 V(country_net)$y = layout_country[,2]
 
 ## Uncomment the next line and last line to save to file
 #png(filename = 'country_net.png', width = 2000, height = 2000)
-plot(country_net, #layout = layout_country, 
+par(oma = rep(0, 4))
+plot(country_net, frame = TRUE,
+	 #layout = layout_country, 
 	 vertex.size = 4 * log(1 + sapply(V(country_net)$name, 
 	 								 function (x) sum(mdf$country == x, 
 	 								 				 na.rm = TRUE))),
@@ -399,7 +457,7 @@ plot(country_net, #layout = layout_country,
 	 edge.loop.angle = -atan2(head_of(country_net, E(country_net))$y,
 	 						  head_of(country_net, E(country_net))$x),
 	 palette = brewer.pal(7, 'Set1'), 
-	 margin = 1)
+	 margin = .15)
 #box()
 #dev.off()
 ```
@@ -412,47 +470,78 @@ This section analyzes the areas or keywords information.  We first identify the 
 
 ```{r areas_coverage}
 ## Extract the list of areas
-areas = mdf %>% select(-(id:docs)) %>% names
+areas = mdf %>% 
+	select(-(id:docs)) %>% 
+	names()
 
 ## Number of areas
 length(areas)
 
 ## Coverage of the top 15, 30, and 45 areas
-areas_15 = mdf %>% select(one_of(areas)) %>% summarize_each('sum') %>% 
-	sort(decreasing = TRUE) %>% names %>% head(n=15)
+areas_15 = mdf %>% 
+	select(one_of(areas)) %>% 
+	summarize_each('sum') %>% 
+	sort(decreasing = TRUE) %>% 
+	names() %>% 
+	head(n=15)
 
-areas_30 = mdf %>% select(one_of(areas)) %>% summarize_each('sum') %>%
-	sort(decreasing = TRUE) %>% names %>% head(n=30)
+areas_30 = mdf %>% 
+	select(one_of(areas)) %>% 
+	summarize_each('sum') %>%
+	sort(decreasing = TRUE) %>% 
+	names() %>% 
+	head(n=30)
 
-areas_45 = mdf %>% select(one_of(areas)) %>% summarize_each('sum') %>%
-	sort(decreasing = TRUE) %>% names %>% head(n=45)
+areas_45 = mdf %>% 
+	select(one_of(areas)) %>% 
+	summarize_each('sum') %>%
+	sort(decreasing = TRUE) %>% 
+	names() %>% 
+	head(n=45)
 
 areas_coverage = function (areas) {
-	mdf %>% select(one_of(areas)) %>% rowSums() %>% 
+	mdf %>% 
+		select(one_of(areas)) %>% 
+		rowSums() %>% 
 		magrittr::is_greater_than(0) %>%
-		sum %>% magrittr::divide_by(nrow(mdf))
+		sum() %>% 
+		magrittr::divide_by(nrow(mdf))
 }
 
 ## Function to collapse a list of areas and replace dots with spaces
 areas_to_string = function (areas) {
-	areas %>% paste(collapse = '; ') %>% 
-		gsub('\\.\\.', '\\.', .) %>% gsub('\\.', ' ', .)
+	areas %>% 
+		gsub('\\.\\.', '\\.', .) %>% 
+		gsub('\\.', ' ', .) %>%
+		gsub(' $', '', .) %>%
+		paste(collapse = '; ')
 }
 
-areas_list = list(areas_15 = areas_15, areas_30 = areas_30, areas_45 = areas_45)
+areas_list = list(areas_15 = areas_15, 
+				  areas_30 = areas_30, 
+				  areas_45 = areas_45)
 areas_coverage_df = data.frame(
 						areas = sapply(areas_list, areas_to_string),
-						coverage = 100 * sapply(areas_list, areas_coverage)
+						coverage = 100 * sapply(areas_list,
+												areas_coverage)
 )
-
-areas_coverage_df %>% kable(digits = 0)
+```
+```{r areas_coverage_table, results = 'asis'}
+areas_coverage_df %>% 
+	# kable(digits = 0)
+	xtable(digits = 0, align = 'lp{.67\\textwidth}r') %>%
+	print(floating = FALSE)
 ```
 
 ```{r areas_wb}
 ## Top 15 areas in the Western Balkans
-areas_15_wb = mdf %>% filter(country %in% western_balkans) %>%
-	select(one_of(areas)) %>% summarize_each('sum') %>% 
-	sort(decreasing = TRUE) %>% names %>% head(n=15)
+areas_15_wb = mdf %>% 
+	filter(country %in% western_balkans) %>%
+	select(one_of(areas)) %>% 
+	summarize_each('sum') %>% 
+	sort(decreasing = TRUE) %>% 
+	names() %>% 
+	head(n=15)
 areas_15_wb
 ```
 
@@ -460,36 +549,44 @@ We can also use cluster analysis, treating similar areas of interest or similar 
 
 ```{r areas_distances}
 edge_dist_45 = apply(as_edgelist(graph), 1, 
-					 function (x) (dist(mdf[x, areas_45], method = 'binary')[1]))
+					 function (x) (dist(mdf[x, areas_45], 
+					 				   method = 'binary')[1]))
 edge_dist_15 = apply(as_edgelist(graph), 1, 
-					 function (x) (dist(mdf[x, areas_15], method = 'binary')[1]))
+					 function (x) (dist(mdf[x, areas_15], 
+					 				   method = 'binary')[1]))
 
 edge_dist_45_plot = ggplot(data.frame(x = edge_dist_45), aes(x)) + 
-	geom_segment(aes(x = 0.25, y = 0, xend = 1, yend = 1), color = 'blue') +
+	geom_segment(aes(x = 0.25, y = 0, xend = 1, yend = 1), 
+				 color = 'blue') +
 	stat_ecdf() + 
 	coord_flip() +
 	xlab('45-area distance') + 
-	scale_y_continuous(name = 'cumulative percentile', labels = scales::percent)
+	scale_y_continuous(name = 'cumulative percentile', 
+					   labels = scales::percent)
 	
 edge_dist_15_plot = ggplot(data.frame(x = edge_dist_15), aes(x)) + 
-	geom_segment(aes(x = 0, y = 0, xend = 1, yend = 1), color = 'blue') +
+	geom_segment(aes(x = 0, y = 0, xend = 1, yend = 1), 
+				 color = 'blue') +
 	stat_ecdf() + 
 	coord_flip() +
-	labs(x = '15-area distance', y = 'cumulative quantile') +
-	scale_y_continuous(name = 'cumulative percentile', labels = scales::percent)
+	xlab('15-area distance') +
+	scale_y_continuous(name = 'cumulative percentile', 
+					   labels = scales::percent)
 
 plot_grid(edge_dist_15_plot, edge_dist_45_plot, labels = 'AUTO')
 ```	
 
-Specifically, using the 15-area distance, collaborations between researchers with substantially different interests (e.g., near .75, `r target = .75; ecdf(edge_dist_15)(target + .01) - ecdf(edge_dist_15)(target - .01) * 100`%) are only slightly more frequent than collaborations between researchers with fairly similar interests (e.g., near .25, `r target = .25; ecdf(edge_dist_15)(target + .01) - ecdf(edge_dist_15)(target - .01)`).  
+Specifically, using the 15-area distance, collaborations between researchers with substantially different interests (e.g., near .75, `r target = .75; (ecdf(edge_dist_15)(target + .01) - ecdf(edge_dist_15)(target - .01)) * 100`%) are only slightly more common than collaborations between researchers with fairly similar interests (e.g., near .25, `r target = .25; (ecdf(edge_dist_15)(target + .01) - ecdf(edge_dist_15)(target - .01))*100`).  
 
 For areas, we identify clusters among the top 45 areas, based on similarities in the distribution of individual researchers.  
 
 ```{r areas_cluster}
 ## Cluster analysis
-areas_data = mdf %>% select(one_of(areas_45))
+areas_data = mdf %>% 
+	select(one_of(areas_45))
 areas_dendro = dist(t(areas_data*1), method = 'binary') %>%
-	hclust %>% as.dendrogram %>%
+	hclust() %>% 
+	as.dendrogram() %>%
 	color_branches(h = .8) %>%
 	color_labels(h = .8) %>%
 	set('labels_cex', .5)
@@ -504,19 +601,22 @@ areas_data = mdf %>% select(one_of('id', areas_45)) %>%
 				mutate(area = gsub('\\.', ' ', area))
 
 ggplot(data = areas_data, 
-	   aes(id, reorder(area, cluster), fill = as.factor(value * cluster))) + 
+	   aes(id, reorder(area, cluster), 
+	   	   fill = as.factor(value * cluster))) + 
 	geom_tile() +
 	scale_x_discrete(breaks = NULL, name = '') + 
 	ylab('') + 
-	scale_fill_manual(values = rep(brewer.pal(5, 'Set1'), 4), guide = FALSE) +
+	scale_fill_manual(values = rep(brewer.pal(5, 'Set1'), 4), 
+					  guide = FALSE) +
 	theme(axis.text.y = element_text(size = 8))
 ```
 
 
-We can construct a network of individuals and the top 45 areas, although the results are difficult to interpret.  
+We can construct a network of individuals and the top 45 areas; however, the results are difficult to interpret, and so the next chunk is not evaluated here.  
 
 ```{r areas_network, eval=FALSE}
-areas_network = mdf %>% select(one_of('id', areas_30)) %>% 
+areas_network = mdf %>% 
+	select(one_of('id', areas_30)) %>% 
 	melt(id.vars = 'id', variable.name = 'area') %>%
 	filter(value) %>% 
 	graph_from_data_frame(directed = FALSE)
@@ -549,7 +649,9 @@ Next we use heatmaps to compare countries and areas.
 
 ```{r countries_areas_heatmaps}
 ## Country x areas
-country_areas = mdf %>% group_by(country) %>% select(one_of(areas)) %>% 
+country_areas = mdf %>% 
+	group_by(country) %>% 
+	select(one_of(areas)) %>% 
 	summarize_each('sum') %>% 
 	melt(id.vars = 'country') %>% 
 	filter(value != 0)
@@ -579,12 +681,14 @@ ggplot(data = filter(country_areas, variable %in% areas_45),
 # 		  axis.text.y = element_text(size = 2))
 
 ## Heatmap:  Western Balkans and top 45 areas
-ggplot(data = {country_areas %>% filter(country %in% western_balkans, 
-										variable %in% areas_45) %>%
-				mutate(variable = gsub('\\.', ' ', variable))}, 
+ggplot(data = {country_areas %>% 
+		       filter(country %in% western_balkans, 
+                      variable %in% areas_45) %>%
+		       mutate(variable = gsub('\\.', ' ', variable))}, 
 	   aes(country, reorder(variable, desc(variable)), fill = value)) +
 	geom_tile() + 
-	scale_fill_gradient(low = 'yellow', high = 'red', name = 'no.\nauthors') +
+	scale_fill_gradient(low = 'yellow', high = 'red', 
+						name = 'no.\nauthors') +
 	xlab('') + ylab('') +
 	theme(axis.text.x = element_text(hjust = 1, angle = 20), 
 		  axis.text.y = element_text(size = 6))
@@ -594,23 +698,34 @@ Finally, we can calculate a "score" for each country, based on the number of the
 
 ```{r areas_score}
 ## Calculate an areas score and add it to country_df
-country_df = country_areas %>% filter(variable %in% areas_45) %>%
-	group_by(country) %>% summarize(areas.45.score = sum(value > 0)) %>%
+country_df = country_areas %>% 
+	filter(variable %in% areas_45) %>%
+	group_by(country) %>% 
+	summarize(areas.45.score = sum(value > 0)) %>%
 	right_join(country_df)
 
 ggpairs(country_df, columns = c('n_authors', 'btwn_log_median',
 								'areas.45.score',
 								'hdi', 'gdp'), 
-		lower = list(continuous = wrap(geom_scatter_smooth, method = 'lm'))) +
+		lower = list(continuous = wrap(geom_scatter_smooth, 
+									   method = 'lm'))) +
 	theme(axis.text = element_text(size = 4), 
 		  axis.title = element_text(size = 6))
-areas_auth_gdp_fit = lm(data = country_df, areas.45.score ~ log10(n_authors) + I(gdp/1000))
-kable({tidy(areas_auth_gdp_fit) %>% 
-		mutate(ci.low = estimate - qnorm(.975)*std.error, 
-			   ci.high = estimate + qnorm(.975)*std.error)}, 
-	  caption = paste('Linear regression of top 45 areas score against GDP and number of authors. ', 
-	  	'(R^2 = ', glance(areas_auth_gdp_fit)$r.squared, 
-	  	')', sep = ''))
+areas_auth_gdp_fit = lm(data = country_df, 
+						areas.45.score ~ log10(n_authors) + 
+							I(gdp/1000))
+areas_auth_gdp_fit %>% 
+	tidy() %>% 
+	mutate(ci.low = estimate - qnorm(.975)*std.error, 
+		   ci.high = estimate + qnorm(.975)*std.error) %>%
+	kable(., 
+		  caption = paste('Linear regression of top 45 areas score',
+		  				' ',
+		  				'against GDP and number of authors. ', 
+		  				'(R^2 = ', 
+		  				format(glance(areas_auth_gdp_fit)$r.squared,
+		  					   digits = 3), 
+		  				')', sep = ''))
 
 ggplot(country_df, aes(n_authors, areas.45.score, color = gdp/1000)) + 
 	geom_point() + 
@@ -622,7 +737,8 @@ ggplot(country_df, aes(n_authors, areas.45.score, color = gdp/1000)) +
 						 name = 'GDP per cap.\n(1k USD)', 
 						 breaks = seq(10, 70, by = 20)) +
 	# theme(legend.position = 'bottom')
-	theme(legend.position = c(.5, .25), legend.direction = 'horizontal', 
+	theme(legend.position = c(.5, .25), 
+		  legend.direction = 'horizontal', 
 		  legend.text = element_text(size = 8),
 		  legend.title = element_text(size = 8))
 
@@ -660,7 +776,9 @@ ggplot(country_df, aes(n_authors, areas.45.score, color = gdp/1000)) +
 ```{r missed_connections, eval=TRUE}
 ## Calculate distance based on areas
 areas = mdf %>% select(-(id:docs)) %>% names
-areas_based_dist = dist({mdf %>% select(one_of(areas_45))}, method = 'binary') %>%
+areas_based_dist = mdf %>%
+	select(one_of(areas_45)) %>%
+	dist(method = 'binary') %>%
 	as.matrix()
 dimnames(areas_based_dist) = list(mdf$sid, mdf$sid)
 ## Melt into dataframe
@@ -671,41 +789,52 @@ dist_df = melt(areas_based_dist, value.name = 'areas.distance',
 paths_dist = shortest.paths(graph)
 dimnames(paths_dist) = list(V(graph)$sid, V(graph)$sid)
 ## Melt into dataframe and join with the areas-based distance
-dist_df = melt(paths_dist, value.name = 'path.distance', as.is = TRUE) %>% 
+dist_df = melt(paths_dist, 
+			   value.name = 'path.distance', 
+			   as.is = TRUE) %>% 
 	full_join(dist_df)
 ## Fit a GAM, and use its predictions to identify missed connections
 dist_df$path.dist.pred = 
 	gam(path.distance ~ s(areas.distance, bs = 'cs'), 
 		data = dist_df)$fitted.values
-dist_df = dist_df %>% mutate(missed.connection = path.distance > 2.5 * path.dist.pred)
+dist_df = dist_df %>% 
+	mutate(missed.connection = path.distance > 2.5 * path.dist.pred)
 ## Clean up
 rm(areas_based_dist, paths_dist)
 
 ## How many missed connections?
-dist_df %>% filter(Var1 < Var2, missed.connection) %>% nrow()
+dist_df %>% 
+	filter(Var1 < Var2, missed.connection) %>% 
+	nrow()
 
 ## Plotting areas vs. path distance, the smooth, and missed connections
 ggplot(data = filter(dist_df, Var1 < Var2), 
 	   aes(areas.distance, path.distance)) + 
-	geom_point(aes(color = missed.connection, alpha = missed.connection), 
+	geom_point(aes(color = missed.connection, 
+				   alpha = missed.connection), 
 			   position = 'jitter') + 
 	scale_color_brewer(palette = 'Set1', guide = FALSE) +
 	scale_alpha_discrete(range = c(.01, 1), guide = FALSE) +
-	geom_line(aes(areas.distance, path.dist.pred), alpha = 1, size = 2) +
+	geom_line(aes(areas.distance, path.dist.pred), 
+			  alpha = 1, size = 2) +
 	xlab('areas-based distance') + ylab('network-based distance')
 
 ## Extract the missed connections
-missed_df = dist_df %>% filter(missed.connection)
+missed_df = dist_df %>% 
+	filter(missed.connection)
 
 who_is = function (sid) {
 	sid = as.character(sid)
-	mdf[which(mdf$sid == sid), c('sid', 'given', 'surname', 'country')]
+	mdf[which(mdf$sid == sid), 
+		c('sid', 'given', 'surname', 'country')]
 }
 
-var1_df = lapply(missed_df[['Var1']], who_is) %>% do.call(rbind, .)
+var1_df = lapply(missed_df[['Var1']], who_is) %>% 
+	do.call(rbind, .)
 names(var1_df) = c('Var1', 'given.1', 'surname.1', 'country.1')
 
-var2_df = lapply(missed_df[['Var2']], who_is) %>% do.call(rbind, .)
+var2_df = lapply(missed_df[['Var2']], who_is) %>% 
+	do.call(rbind, .)
 names(var2_df) = c('Var2', 'given.2', 'surname.2', 'country.2')
 
 missed_df = left_join(missed_df, cbind(var1_df, var2_df))

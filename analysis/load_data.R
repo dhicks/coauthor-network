@@ -8,10 +8,13 @@ mdf_file = paste(data_folder, 'combined_metadata.csv', sep = '')
 mdf = read.csv(mdf_file, stringsAsFactors = FALSE)
 
 ## Coerce area columns to logical
-mdf_areas = mdf %>% select(-(X:surname)) %>% sapply(function (x) x == 'True')
+mdf_areas = mdf %>% 
+	select(-(X:surname)) %>% 
+	sapply(function (x) x == 'True')
 
 ## Fix Kosovars
-kosovar_affiliations = c('Universiteti i Prishtines', 'Consulate of the Republic of Kosovo')
+kosovar_affiliations = c('Universiteti i Prishtines', 
+						 'Consulate of the Republic of Kosovo')
 mdf[mdf$affiliation %in% kosovar_affiliations,]$country = 'Kosovo'
 
 ## Fix the country levels
@@ -46,13 +49,14 @@ rm(fix_country_levels)
 ## Remove some columns we don't need, 
 ##  fix the formatting of id to match the graphml, and
 ##  turn affiliation and country into factors
-mdf_main = mdf %>% transmute(id = paste('n', X, sep = ''),
-							 sid = sid,
-							 surname = surname,
-							 given = given,
-							 affiliation = as.factor(affiliation),
-							 country = as.factor(country),
-							 docs = docs)
+mdf_main = mdf %>% 
+	transmute(id = paste('n', X, sep = ''),
+			  sid = sid,
+			  surname = surname,
+			  given = given,
+			  affiliation = as.factor(affiliation),
+			  country = as.factor(country),
+			  docs = docs)
 ## Combine the main metadata w/ the area columns
 mdf = cbind(mdf_main, mdf_areas)
 ## Discard the interim variables
